@@ -874,12 +874,19 @@
             if (rows.length === 0) return "";
 
             // จัดกลุ่ม: สทล. -> แขวง -> [คำขอ] (ใช้ rows ที่แสดงจริงเสมอ)
-            const stlOrder = [];
             const stlMap = {};
             rows.forEach(r => {
-                if (!stlMap[r.stl]) { stlMap[r.stl] = {}; stlOrder.push(r.stl); }
+                if (!stlMap[r.stl]) stlMap[r.stl] = {};
                 if (!stlMap[r.stl][r.khwaeng]) stlMap[r.stl][r.khwaeng] = [];
                 stlMap[r.stl][r.khwaeng].push(r);
+            });
+
+            // เรียงลำดับ สทล. ตามหมายเลข (สทล.01, สทล.02, ... ) แทนลำดับที่เจอในข้อมูลดิบ
+            const stlOrder = Object.keys(stlMap).sort((a, b) => {
+                const numA = parseInt(a.replace(/[^0-9]/g, ""), 10);
+                const numB = parseInt(b.replace(/[^0-9]/g, ""), 10);
+                if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+                return a.localeCompare(b, "th");
             });
 
             // ถ้ามี totalsRows ให้สร้างตารางผลรวมจริงต่อ สทล. และต่อ (สทล.+แขวง) จากชุดข้อมูลนั้น
