@@ -1014,12 +1014,12 @@
                 modalTitle.innerHTML = `<span class="h-3 w-1 bg-emerald-500 rounded-full"></span> รายละเอียดคำขอ Shapefile ของวันนี้`;
                 const rows = buildDailyRequestRows(23);
                 totalCount = rows.length;
-                bodyHtml = renderDailyRequestGroup(rows, "bg-emerald-50 text-emerald-700 border-emerald-200");
+                bodyHtml = renderNestedRequestGroups(rows, "bg-emerald-50 text-emerald-700 border-emerald-200");
             } else if (category === 'map') {
                 modalTitle.innerHTML = `<span class="h-3 w-1 bg-amber-400 rounded-full"></span> รายละเอียดคำขอแผนที่/แผนผัง ของวันนี้`;
                 const rows = buildDailyRequestRows(38);
                 totalCount = rows.length;
-                bodyHtml = renderDailyRequestGroup(rows, "bg-amber-50 text-amber-700 border-amber-200");
+                bodyHtml = renderNestedRequestGroups(rows, "bg-amber-50 text-amber-700 border-amber-200");
             } else if (category === 'env') {
                 modalTitle.innerHTML = `<span class="h-3 w-1 bg-indigo-500 rounded-full"></span> รายละเอียดคำขอรายงานสิ่งแวดล้อม ของวันนี้`;
                 const draftRows = buildDailyRequestRows(29, 24);
@@ -1027,9 +1027,9 @@
                 const compRows  = buildDailyRequestRows(31, 24);
                 totalCount = draftRows.length + recvRows.length + compRows.length;
 
-                const draftHtml = renderDailyRequestGroup(draftRows, "bg-indigo-50 text-indigo-700 border-indigo-200");
-                const recvHtml  = renderDailyRequestGroup(recvRows,  "bg-indigo-50 text-indigo-700 border-indigo-200");
-                const compHtml  = renderDailyRequestGroup(compRows,  "bg-indigo-50 text-indigo-700 border-indigo-200");
+                const draftHtml = renderNestedRequestGroups(draftRows, "bg-indigo-50 text-indigo-700 border-indigo-200");
+                const recvHtml  = renderNestedRequestGroups(recvRows,  "bg-indigo-50 text-indigo-700 border-indigo-200");
+                const compHtml  = renderNestedRequestGroups(compRows,  "bg-indigo-50 text-indigo-700 border-indigo-200");
 
                 if (draftHtml) bodyHtml += `<div class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5">• ร่างส่งเขต</div><div class="space-y-2">${draftHtml}</div>`;
                 if (recvHtml)  bodyHtml += `<div class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 ${draftHtml ? 'mt-4' : ''}">• รับจากแขวง</div><div class="space-y-2">${recvHtml}</div>`;
