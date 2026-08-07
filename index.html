@@ -136,7 +136,7 @@
                 <span class="stat-label font-black text-indigo-600 uppercase tracking-wider block truncate">4. รายงานสิ่งแวดล้อม</span>
                 <span id="env-percent" class="stat-num-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200 shadow-sm whitespace-nowrap">-%</span>
             </div>
-            <div class="grid grid-cols-3 gap-1 mt-auto border-t border-slate-200 pt-1.5 text-center">
+            <div class="grid grid-cols-4 gap-1 mt-auto border-t border-slate-200 pt-1.5 text-center">
                 <div class="truncate">
                     <span class="stat-label font-black text-slate-400 block mb-0.5">ต้องทำ</span>
                     <span id="env-total" class="stat-num-md font-black text-slate-800">-</span>
@@ -151,6 +151,14 @@
                     <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-indigo-400 leading-tight">
                         <span class="whitespace-nowrap">EAR: <span id="env-completed-ear" class="text-indigo-600 font-black">-</span></span>
                         <span class="whitespace-nowrap">EC: <span id="env-completed-ec" class="text-indigo-600 font-black">-</span></span>
+                    </div>
+                </div>
+                <div class="border-l border-slate-200 pl-1 truncate">
+                    <span class="stat-label font-black text-amber-500 block mb-0.5">รอแขวง</span>
+                    <span id="env-waiting" class="stat-num-md font-black text-amber-500">-</span>
+                    <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-amber-400 leading-tight">
+                        <span class="whitespace-nowrap">EAR: <span id="env-waiting-ear" class="text-amber-500 font-black">-</span></span>
+                        <span class="whitespace-nowrap">EC: <span id="env-waiting-ec" class="text-amber-500 font-black">-</span></span>
                     </div>
                 </div>
                 <div class="border-l border-slate-200 pl-1 truncate">
@@ -281,6 +289,7 @@
         let envPieChartInstance = null;
         let currentSheetData = []; // เก็บ sheetData ล่าสุดไว้ใช้กับโมดัลรายละเอียดคำขอรายวัน
         let currentReportDate = null; // เก็บวันที่ที่แสดงในกรอบ "ความคืบหน้า" (จาก column AC) ไว้ใช้ filter
+        let envDonutSlices = []; // เก็บข้อมูล 6 ชิ้นของโดนัทสิ่งแวดล้อมล่าสุด ไว้ใช้ตอนคลิกดูรายละเอียด
 
         Chart.register(ChartDataLabels);
         const isSmallScreen = window.innerWidth < 768;
@@ -339,12 +348,6 @@
                 // === Summary row (ใช้ column index จากไฟล์ 2.html / 1.html — เหมือนกัน) ===
                 const summaryRow = sheetData.find(row => row[26] && (row[26].toString().includes("รวม") || row[26].toString().includes("Total")));
 
-                // === แถวข้อมูลสำหรับการ์ด "รายงานสิ่งแวดล้อม" (อ้างอิงเซลล์ตรงตามที่ระบุ) ===
-                // index 0 = แถวหัวตาราง (แถวที่ 1 ในชีท) => แถวที่ N ในชีท = index (N-1)
-                const envRow24  = sheetData[23];  // แถวที่ 24: ต้องทำ(AN), EAR ต้องทำ(AL), EC ต้องทำ(AM), สมบูรณ์(AT), เหลือ(AU)
-                const envRow25  = sheetData[24];  // แถวที่ 25: % (AT)
-                const envRow110 = sheetData[109]; // แถวที่ 110: EAR/EC สมบูรณ์(AY,AZ), EAR/EC เหลือ(BA,BB)
-
                 if (summaryRow) {
                     // --- วันที่ ---
                     // ใช้วันที่ปัจจุบันจริงของระบบเป็นวันที่อ้างอิงในกรอบ "ความคืบหน้า" (ไม่ใช้ค่าจากชีทสรุปอีกต่อไป เพราะคอลัมน์นั้นไม่ใช่วันที่)
@@ -369,31 +372,44 @@
                     document.getElementById('map-remaining').textContent = mapRem.toLocaleString();
                     document.getElementById('map-percent').textContent = mapReq > 0 ? ((mapComp / mapReq) * 100).toFixed(1) + '%' : '0%';
 
-                    // ต้องทำ = AN24, สมบูรณ์ = AT24, เหลือ = AU24
-                    const envTotal = envRow24 ? (Number(envRow24[39]) || 0) : 0;
-                    const envComp  = envRow24 ? (Number(envRow24[45]) || 0) : 0;
-                    const envRem   = envRow24 ? (Number(envRow24[46]) || 0) : 0;
-                    document.getElementById('env-total').textContent = envTotal.toLocaleString();
+                    // === การ์ด 4 "รายงานสิ่งแวดล้อม" ===
+                    // คำนวณสดจากข้อมูลรายคำขอด้วย buildAllEnvRows() ซึ่งเป็นฟังก์ชันเดียวกับที่ใช้สร้างกราฟโดนัท
+                    // "รายงานสิ่งแวดล้อม" ด้านล่าง เพื่อให้ตัวเลขในการ์ดนี้ตรงกับกราฟโดนัทเสมอ (ไม่พึ่งเซลล์สรุปจากชีทอีกต่อไป)
+                    // สถานะ: complete = สมบูรณ์, waiting = รอร่างรายงานจากแขวง, remaining = คงเหลือ (ยังไม่ได้ส่งร่าง)
+                    const envRowsForCard = buildAllEnvRows();
+                    const envCompEarRows = envRowsForCard.filter(r => r.status === 'complete' && r.type === 'EAR');
+                    const envCompEcRows  = envRowsForCard.filter(r => r.status === 'complete' && r.type === 'EC');
+                    const envWaitEarRows = envRowsForCard.filter(r => r.status === 'waiting'  && r.type === 'EAR');
+                    const envWaitEcRows  = envRowsForCard.filter(r => r.status === 'waiting'  && r.type === 'EC');
+                    const envRemEarRows  = envRowsForCard.filter(r => r.status === 'remaining' && r.type === 'EAR');
+                    const envRemEcRows   = envRowsForCard.filter(r => r.status === 'remaining' && r.type === 'EC');
+
+                    const envCompEar = envCompEarRows.length, envCompEc = envCompEcRows.length;
+                    const envWaitEar = envWaitEarRows.length, envWaitEc = envWaitEcRows.length;
+                    const envRemEar  = envRemEarRows.length,  envRemEc  = envRemEcRows.length;
+
+                    const envTotalEar = envCompEar + envWaitEar + envRemEar;
+                    const envTotalEc  = envCompEc  + envWaitEc  + envRemEc;
+                    const envComp  = envCompEar + envCompEc;
+                    const envWait  = envWaitEar + envWaitEc;
+                    const envRem   = envRemEar  + envRemEc;
+                    const envTotal = envTotalEar + envTotalEc;
+
+                    document.getElementById('env-total').textContent     = envTotal.toLocaleString();
                     document.getElementById('env-completed').textContent = envComp.toLocaleString();
+                    document.getElementById('env-waiting').textContent   = envWait.toLocaleString();
                     document.getElementById('env-remaining').textContent = envRem.toLocaleString();
 
-                    // % = AT25 (ดึงค่าจากเซลล์ตรง รองรับทั้งรูปแบบที่เก็บเป็น % สำเร็จรูป หรือเป็นเศษส่วนทศนิยม)
-                    document.getElementById('env-percent').textContent = formatPercentCell(envRow25 ? envRow25[45] : null);
+                    // % สมบูรณ์ = สมบูรณ์ / ต้องทำ (คำนวณสดให้ตรงกับตัวเลขในการ์ดเดียวกัน)
+                    document.getElementById('env-percent').textContent = envTotal > 0 ? ((envComp / envTotal) * 100).toFixed(1) + '%' : '0%';
 
                     // --- ย่อย EAR/EC ของรายงานสิ่งแวดล้อม ---
-                    // ต้องทำ:   AL24 (index 37) = EAR, AM24 (index 38) = EC
-                    // สมบูรณ์:  AY110 (index 50) = EAR, AZ110 (index 51) = EC
-                    // เหลือ:    BA110 (index 52) = EAR, BB110 (index 53) = EC
-                    const envTotalEar = envRow24  ? (Number(envRow24[37])  || 0) : 0;
-                    const envTotalEc  = envRow24  ? (Number(envRow24[38])  || 0) : 0;
-                    const envCompEar  = envRow110 ? (Number(envRow110[50]) || 0) : 0;
-                    const envCompEc   = envRow110 ? (Number(envRow110[51]) || 0) : 0;
-                    const envRemEar   = envRow110 ? (Number(envRow110[52]) || 0) : 0;
-                    const envRemEc    = envRow110 ? (Number(envRow110[53]) || 0) : 0;
                     document.getElementById('env-total-ear').textContent = envTotalEar.toLocaleString();
                     document.getElementById('env-total-ec').textContent  = envTotalEc.toLocaleString();
                     document.getElementById('env-completed-ear').textContent = envCompEar.toLocaleString();
                     document.getElementById('env-completed-ec').textContent  = envCompEc.toLocaleString();
+                    document.getElementById('env-waiting-ear').textContent   = envWaitEar.toLocaleString();
+                    document.getElementById('env-waiting-ec').textContent    = envWaitEc.toLocaleString();
                     document.getElementById('env-remaining-ear').textContent = envRemEar.toLocaleString();
                     document.getElementById('env-remaining-ec').textContent  = envRemEc.toLocaleString();
 
@@ -529,7 +545,7 @@
                         maintainAspectRatio: false,
                         onClick: (event, elements) => {
                             if (elements.length > 0) {
-                                showDetailModal('shapefile', labels[elements[0].index], elements[0].datasetIndex, sheetData);
+                                showDetailModal('shapefile', labels[elements[0].index], elements[0].datasetIndex);
                             }
                         },
                         plugins: {
@@ -553,7 +569,7 @@
                     data: { labels: ['เสร็จสะสม', 'คงเหลือ'], datasets: [{ data: [mComp, mRem], backgroundColor: ['#f59e0b', '#f43f5e'], borderWidth: 1, borderColor: '#ffffff' }] },
                     options: {
                         responsive: true, maintainAspectRatio: false, layout: { padding: 6 },
-                        onClick: (event, elements) => { if (elements.length > 0) showDetailModal('map', 'ทุกภูมิภาค', elements[0].index, sheetData); },
+                        onClick: (event, elements) => { if (elements.length > 0) showDetailModal('map', 'ทุกภูมิภาค', elements[0].index); },
                         plugins: {
                             legend: { display: true, position: 'right', align: 'center', labels: { color: '#1e293b', font: { size: isSmallScreen ? 9 : 11 }, boxWidth: 10, padding: 8 } },
                             cutout: '50%',
@@ -569,22 +585,36 @@
                     }
                 });
 
-                // === Donut: สิ่งแวดล้อม (แยกย่อย EAR/EC ในทั้งสมบูรณ์และคงเหลือ) ===
+                // === Donut: สิ่งแวดล้อม (6 ประเภท: สมบูรณ์ / รอร่างรายงานจากแขวง / คงเหลือ × EAR,EC) ===
+                // คำนวณสดจากข้อมูลรายคำขอ (currentSheetData): AD(29)=ส่งร่างให้แขวงแล้ว, AE(30)=แขวงส่งร่างกลับมาแล้ว, AF(31)=ส่งรายงานสมบูรณ์แล้ว
                 const ctxEnv = document.getElementById('envPieChart').getContext('2d');
                 if (envPieChartInstance) envPieChartInstance.destroy();
-                const eComp = envRow24  ? (Number(envRow24[45])  || 0) : 0;
-                const eRem  = envRow24  ? (Number(envRow24[46])  || 0) : 0;
-                const eCompEarV = envRow110 ? (Number(envRow110[50]) || 0) : 0;
-                const eCompEcV  = envRow110 ? (Number(envRow110[51]) || 0) : 0;
-                const eRemEarV  = envRow110 ? (Number(envRow110[52]) || 0) : 0;
-                const eRemEcV   = envRow110 ? (Number(envRow110[53]) || 0) : 0;
+
+                const allEnvRows = buildAllEnvRows();
+                const compEarRows = allEnvRows.filter(r => r.status === 'complete' && r.type === 'EAR');
+                const compEcRows  = allEnvRows.filter(r => r.status === 'complete' && r.type === 'EC');
+                const waitEarRows = allEnvRows.filter(r => r.status === 'waiting'  && r.type === 'EAR');
+                const waitEcRows  = allEnvRows.filter(r => r.status === 'waiting'  && r.type === 'EC');
+                const remEarRows  = allEnvRows.filter(r => r.status === 'remaining' && r.type === 'EAR');
+                const remEcRows   = allEnvRows.filter(r => r.status === 'remaining' && r.type === 'EC');
+
+                // เก็บไว้ให้ modal ใช้ตอนคลิกแต่ละชิ้นของโดนัท (type ใช้คำนวณผลรวมจริงต่อ สทล./แขวง รวมทุกสถานะ)
+                envDonutSlices = [
+                    { label: 'สมบูรณ์ • EAR',               rows: compEarRows, type: 'EAR', badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+                    { label: 'สมบูรณ์ • EC',                 rows: compEcRows,  type: 'EC',  badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+                    { label: 'รอร่างรายงานจากแขวง • EAR',    rows: waitEarRows, type: 'EAR', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+                    { label: 'รอร่างรายงานจากแขวง • EC',      rows: waitEcRows,  type: 'EC',  badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+                    { label: 'คงเหลือ • EAR',                 rows: remEarRows,  type: 'EAR', badgeClass: 'bg-rose-50 text-rose-700 border-rose-200' },
+                    { label: 'คงเหลือ • EC',                   rows: remEcRows,   type: 'EC',  badgeClass: 'bg-rose-50 text-rose-700 border-rose-200' }
+                ];
+
                 envPieChartInstance = new Chart(ctxEnv, {
                     type: 'doughnut',
                     data: {
-                        labels: ['สมบูรณ์ • EAR', 'สมบูรณ์ • EC', 'คงเหลือ • EAR', 'คงเหลือ • EC'],
+                        labels: envDonutSlices.map(s => s.label),
                         datasets: [{
-                            data: [eCompEarV, eCompEcV, eRemEarV, eRemEcV],
-                            backgroundColor: ['#4f46e5', '#a5b4fc', '#e11d48', '#fda4af'],
+                            data: envDonutSlices.map(s => s.rows.length),
+                            backgroundColor: ['#4f46e5', '#a5b4fc', '#f59e0b', '#fcd34d', '#e11d48', '#fda4af'],
                             borderWidth: 2, borderColor: '#ffffff'
                         }]
                     },
@@ -592,7 +622,7 @@
                         responsive: true, maintainAspectRatio: false, layout: { padding: 6 },
                         onClick: (event, elements) => {
                             if (elements.length > 0) {
-                                showDetailModal('environment', 'ทุกภูมิภาค', elements[0].index, sheetData);
+                                showEnvDonutDetailModal(elements[0].index);
                             }
                         },
                         plugins: {
@@ -621,81 +651,44 @@
             }
         }
 
-        // ===== MODAL =====
-        // หมายเหตุ: Modal ใช้ column index จากไฟล์ 1.html (Sheet แรก)
-        // Modal: row[26]=ชื่อสทล., row[2]=ชื่อแขวง, targetColumn=ค่าแจกแจงรายแขวง
-        // shapefile: col 5 (เสร็จ), 6 (เหลือ)
-        // map:       col 11 (เสร็จ), 12 (เหลือ)
-        // env:       col 50 (สมบูรณ์ EAR), 51 (สมบูรณ์ EC), 52 (คงเหลือ EAR), 53 (คงเหลือ EC)
-        function showDetailModal(chartType, scopeName, clickIndex, sheetData) {
+        // ===== MODAL: shapefile (จากแท่งชาร์ต) และ map (จากโดนัท) =====
+        // คำนวณสดจากข้อมูลรายคำขอ (currentSheetData) แล้วแสดงเป็นต้นไม้ สทล. -> แขวง -> คำขอ (กด + เพื่อขยายแต่ละชั้น)
+        // shapefile: สถานะจากคอลัมน์ X (index 23)
+        // map:       สถานะจากคอลัมน์ AM (index 38), นับเฉพาะคำขอที่ต้องใช้แผนที่ (AH/index 33)
+        function showDetailModal(chartType, scopeName, clickIndex) {
             const modal          = document.getElementById('detailsModal');
             const modalTitle     = document.getElementById('modalTitle');
             const modalContainer = document.getElementById('modalContainer');
 
-            let totalSum = 0, targetColumn = 0, statusLabel = "", colorClass = "", badgeClass = "";
+            const isCompleted = (clickIndex === 0);
+            const statusLabel = isCompleted ? "เสร็จสะสม" : "คงเหลือ";
+            let rows = [], colorClass = "", badgeClass = "";
 
+            let totalsRows = null;
             if (chartType === 'shapefile') {
-                targetColumn = (clickIndex === 0) ? 5 : 6;
-                statusLabel  = (clickIndex === 0) ? "เสร็จสะสม" : "คงเหลือ";
-                colorClass   = (clickIndex === 0) ? "text-emerald-600" : "text-rose-500";
-                badgeClass   = (clickIndex === 0) ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200";
+                colorClass = isCompleted ? "text-emerald-600" : "text-rose-500";
+                badgeClass = isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200";
+                const stlNumber = scopeName.replace("สทล.", "").trim();
+                const allShpRows = buildAllShapefileRows().filter(r => r.stl.includes(stlNumber));
+                rows = allShpRows.filter(r => r.status === (isCompleted ? 'complete' : 'remaining'));
+                totalsRows = allShpRows; // ผลรวมทั้งหมด (เสร็จ+คงเหลือ) ของ สทล./แขวง นี้ ใช้เทียบสัดส่วน
                 modalTitle.innerHTML = `<span class="h-3 w-1 bg-emerald-500 rounded-full"></span> งาน Shapefile ${statusLabel} ของ <span class="${colorClass} ml-1 font-black">${scopeName}</span>`;
             } else if (chartType === 'map') {
-                targetColumn = (clickIndex === 0) ? 11 : 12;
-                statusLabel  = (clickIndex === 0) ? "เสร็จสะสม" : "คงเหลือ";
-                colorClass   = (clickIndex === 0) ? "text-amber-500" : "text-rose-500";
-                badgeClass   = (clickIndex === 0) ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200";
+                colorClass = isCompleted ? "text-amber-500" : "text-rose-500";
+                badgeClass = isCompleted ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200";
+                const allMapRows = buildAllMapRows();
+                rows = allMapRows.filter(r => r.status === (isCompleted ? 'complete' : 'remaining'));
+                totalsRows = allMapRows; // ผลรวมทั้งหมด (เสร็จ+คงเหลือ) ของ สทล./แขวง นี้ ใช้เทียบสัดส่วน
                 modalTitle.innerHTML = `<span class="h-3 w-1 bg-amber-400 rounded-full"></span> แผนที่ประกอบคำขอ ${statusLabel} <span class="text-xs text-slate-400 font-normal ml-1">(รวมทุก สทล.)</span>`;
-            } else if (chartType === 'environment') {
-                // index: 0 = สมบูรณ์ EAR (AY/50), 1 = สมบูรณ์ EC (AZ/51), 2 = คงเหลือ EAR (BA/52), 3 = คงเหลือ EC (BB/53)
-                const envColumns = [50, 51, 52, 53];
-                const envLabels  = ["สมบูรณ์ • EAR", "สมบูรณ์ • EC", "คงเหลือ • EAR", "คงเหลือ • EC"];
-                targetColumn = envColumns[clickIndex] ?? 50;
-                statusLabel  = envLabels[clickIndex] ?? envLabels[0];
-                const isCompleted = clickIndex < 2;
-                colorClass   = isCompleted ? "text-indigo-600" : "text-rose-500";
-                badgeClass   = isCompleted ? "bg-indigo-50 text-indigo-700 border-indigo-200" : "bg-rose-50 text-rose-700 border-rose-200";
-                modalTitle.innerHTML = `<span class="h-3 w-1 bg-indigo-500 rounded-full"></span> รายงานสิ่งแวดล้อม ${statusLabel} <span class="text-xs text-slate-400 font-normal ml-1">(รวมทุก สทล.)</span>`;
             }
 
-            let groupedData = {};
-            let lastSeenStl = "";
-
-            sheetData.forEach(row => {
-                // row[1] = ชื่อ สทล., row[2] = ชื่อแขวง (ตาม 1.html)
-                let currentStl = row[1] ? row[1].toString().trim() : "";
-                if (currentStl !== "") lastSeenStl = currentStl;
-
-                const rowDistrict = row[2] ? row[2].toString().trim() : "";
-                const val = Number(row[targetColumn]) || 0;
-
-                if (rowDistrict !== "" && !rowDistrict.includes("รวม") && !rowDistrict.includes("Total") && lastSeenStl !== "" && val > 0) {
-                    if (chartType === 'shapefile') {
-                        const stlNumber = scopeName.replace("สทล.", "").trim();
-                        if (!lastSeenStl.includes(stlNumber)) return;
-                    }
-                    totalSum += val;
-                    if (!groupedData[lastSeenStl]) groupedData[lastSeenStl] = { total: 0, districts: [] };
-                    groupedData[lastSeenStl].total += val;
-                    groupedData[lastSeenStl].districts.push({ name: rowDistrict, value: val });
-                }
-            });
-
-            let htmlBlocks = "";
-            if (Object.keys(groupedData).length === 0) {
-                htmlBlocks = `<div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 font-medium shadow-sm">ไม่มีรายการค้างคาหรือข้อมูลในส่วนนี้</div>`;
-            } else {
-                for (const [stlKey, stlGroup] of Object.entries(groupedData)) {
-                    let rowsHtml = "";
-                    stlGroup.districts.forEach(dist => {
-                        rowsHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0 pl-3"><div class="flex items-center gap-2 text-slate-700 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span><span>${dist.name}</span></div><span class="font-extrabold text-sm text-slate-800">${dist.value.toLocaleString()} คำขอ</span></div>`;
-                    });
-                    htmlBlocks += `<div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden"><div class="bg-slate-100 px-4 py-2.5 flex justify-between items-center border-b border-slate-200"><span class="text-sm font-black text-slate-800">${stlKey}</span><span class="text-xs font-black px-2 py-0.5 rounded-md border ${badgeClass}">รวม: ${stlGroup.total.toLocaleString()} คำขอ</span></div><div class="p-2 divide-y divide-slate-50 text-sm">${rowsHtml}</div></div>`;
-                }
-                htmlBlocks += `<div class="bg-slate-800 text-white rounded-xl p-4 flex justify-between items-center shadow-md"><span class="text-base font-black">รวมทุกแขวง</span><div class="text-right"><span class="text-xl md:text-2xl font-black">${totalSum.toLocaleString()}</span><span class="text-xs font-bold text-slate-300 ml-1">คำขอ</span></div></div>`;
+            let bodyHtml = renderNestedRequestGroups(rows, badgeClass, totalsRows);
+            if (!bodyHtml) {
+                bodyHtml = `<div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 font-medium shadow-sm">ไม่มีรายการค้างคาหรือข้อมูลในส่วนนี้</div>`;
             }
+            bodyHtml += `<div class="bg-slate-800 text-white rounded-xl p-4 flex justify-between items-center shadow-md"><span class="text-base font-black">รวมทุกแขวง</span><div class="text-right"><span class="text-xl md:text-2xl font-black">${rows.length.toLocaleString()}</span><span class="text-xs font-bold text-slate-300 ml-1">คำขอ</span></div></div>`;
 
-            modalContainer.innerHTML = htmlBlocks;
+            modalContainer.innerHTML = bodyHtml;
             modal.classList.remove('hidden');
         }
 
@@ -806,6 +799,37 @@
             return rows;
         }
 
+        // สร้างรายการคำขอ "สิ่งแวดล้อม" ทั้งหมด (ไม่กรองวันที่) พร้อมสถานะ ใช้กับโดนัทสิ่งแวดล้อม
+        // สถานะ: complete = ส่งรายงานสมบูรณ์แล้ว (AF/31 มีค่า)
+        //        waiting  = ส่งร่างให้แขวงแล้ว (AD/29) แต่แขวงยังไม่ส่งกลับ (AE/30 ว่าง) และยังไม่สมบูรณ์
+        //        remaining = นอกเหนือจากนั้น (ยังไม่ได้ส่งร่าง หรือได้รับร่างคืนจากแขวงแล้วแต่ยังไม่ส่งฉบับสมบูรณ์)
+        function buildAllEnvRows() {
+            const rows = [];
+            currentSheetData.forEach((row, idx) => {
+                if (idx === 0) return; // ข้ามแถวหัวตาราง
+
+                const reqNo   = row[6] ? row[6].toString().trim() : "";
+                const stlName = row[8] ? row[8].toString().trim() : "";
+                const khwaeng = row[9] ? row[9].toString().trim() : "ไม่ระบุแขวง";
+                if (!reqNo || !stlName) return;
+
+                const reqType = row[24] ? row[24].toString().trim() : ""; // Y = ประเภทรายงาน EAR/EC
+                if (!reqType) return; // ไม่ใช่คำขอที่ต้องทำรายงานสิ่งแวดล้อม
+
+                const draftSent = row[29] ? row[29].toString().trim() : ""; // AD ส่งร่างให้แขวงแล้ว
+                const recvBack  = row[30] ? row[30].toString().trim() : ""; // AE แขวงส่งร่างกลับมาแล้ว
+                const complete  = row[31] ? row[31].toString().trim() : ""; // AF ส่งรายงานสมบูรณ์แล้ว
+
+                let status;
+                if (complete) status = 'complete';
+                else if (draftSent && !recvBack) status = 'waiting';
+                else status = 'remaining';
+
+                rows.push({ stl: stlName, khwaeng: khwaeng, req: reqNo, type: reqType, status: status });
+            });
+            return rows;
+        }
+
         let dailyGroupToggleCounter = 0; // ใช้สร้าง id ไม่ซ้ำกันสำหรับปุ่ม +/- ของแต่ละกลุ่ม
 
         function renderDailyRequestGroup(rows, badgeClass) {
@@ -841,6 +865,132 @@
                 </div>`;
             }
             return html;
+        }
+
+        // ===== เวอร์ชันซ้อนชั้น: สทล. (กด + เพื่อดูแขวง) -> แขวง (กด + เพื่อดูคำขอ) -> รายการคำขอ =====
+        // totalsRows (ไม่บังคับ): ถ้าระบุ จะใช้ชุดข้อมูลนี้คำนวณ "ผลรวม" ต่อ สทล./แขวง แทนการนับแค่ rows ที่แสดง
+        // (ใช้กับกราฟโดนัทสิ่งแวดล้อม ที่อยากเห็นผลรวมทั้งหมดของ สทล./แขวง นั้นๆ รวมทุกสถานะ ไม่ใช่แค่สถานะที่กำลังดู)
+        function renderNestedRequestGroups(rows, badgeClass, totalsRows) {
+            if (rows.length === 0) return "";
+
+            // จัดกลุ่ม: สทล. -> แขวง -> [คำขอ] (ใช้ rows ที่แสดงจริงเสมอ)
+            const stlOrder = [];
+            const stlMap = {};
+            rows.forEach(r => {
+                if (!stlMap[r.stl]) { stlMap[r.stl] = {}; stlOrder.push(r.stl); }
+                if (!stlMap[r.stl][r.khwaeng]) stlMap[r.stl][r.khwaeng] = [];
+                stlMap[r.stl][r.khwaeng].push(r);
+            });
+
+            // ถ้ามี totalsRows ให้สร้างตารางผลรวมจริงต่อ สทล. และต่อ (สทล.+แขวง) จากชุดข้อมูลนั้น
+            let stlGrandMap = null, khwaengGrandMap = null;
+            if (totalsRows) {
+                stlGrandMap = {}; khwaengGrandMap = {};
+                totalsRows.forEach(r => {
+                    stlGrandMap[r.stl] = (stlGrandMap[r.stl] || 0) + 1;
+                    const key = r.stl + '‖' + r.khwaeng;
+                    khwaengGrandMap[key] = (khwaengGrandMap[key] || 0) + 1;
+                });
+            }
+
+            let html = "";
+            stlOrder.forEach(stlName => {
+                const khwaengMap = stlMap[stlName];
+                const khwaengNames = Object.keys(khwaengMap);
+                const stlTotal = khwaengNames.reduce((sum, k) => sum + khwaengMap[k].length, 0);
+                const stlGrandTotal = stlGrandMap ? (stlGrandMap[stlName] || stlTotal) : stlTotal;
+                const stlBadgeText = stlGrandMap
+                    ? `${stlTotal.toLocaleString()}/${stlGrandTotal.toLocaleString()} คำขอ`
+                    : `${stlTotal.toLocaleString()} คำขอ`;
+
+                dailyGroupToggleCounter++;
+                const stlGroupId = "nested-stl-" + dailyGroupToggleCounter;
+
+                let khwaengHtml = "";
+                khwaengNames.forEach(khwaengName => {
+                    const reqList = khwaengMap[khwaengName];
+                    dailyGroupToggleCounter++;
+                    const khwaengGroupId = "nested-khwaeng-" + dailyGroupToggleCounter;
+                    const itemsHtml = reqList.map(item => {
+                        const typeTag = item.type ? ` <span class="text-indigo-500 font-bold">รายงาน ${item.type}</span>` : "";
+                        return `<div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 pl-3 text-slate-700 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span><span>${item.req}${typeTag}</span></div>`;
+                    }).join("");
+                    // ระดับแขวง: ถ้ามี totalsRows ให้แสดง "จำนวนในตัวกรองนี้ / ผลรวมทั้งหมดของแขวงนั้น" (รวมทุกสถานะ)
+                    // ถ้าไม่มี totalsRows (โหมดเดิม) ให้แสดง "จำนวนในตัวกรองนี้ / ผลรวมของ สทล." เหมือนเดิม
+                    const khwaengBadgeText = khwaengGrandMap
+                        ? `${reqList.length.toLocaleString()}/${(khwaengGrandMap[stlName + '‖' + khwaengName] || reqList.length).toLocaleString()} คำขอ`
+                        : `${reqList.length.toLocaleString()} / ${stlTotal.toLocaleString()} คำขอ`;
+                    khwaengHtml += `<div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                        <div class="px-3 py-2 flex justify-between items-center border-b border-slate-100 bg-slate-50/80">
+                            <span class="text-xs font-black text-slate-700 truncate">แขวง: ${khwaengName}</span>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <span class="text-[11px] font-black px-1.5 py-0.5 rounded border ${badgeClass}">${khwaengBadgeText}</span>
+                                <button type="button" onclick="toggleDailyGroup('${khwaengGroupId}')" class="h-5 w-5 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 font-black hover:bg-slate-50 transition-colors shrink-0" aria-label="แสดง/ซ่อนรายการคำขอ">
+                                    <span id="${khwaengGroupId}-icon">+</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="${khwaengGroupId}" class="hidden p-2 divide-y divide-slate-50 text-sm">${itemsHtml}</div>
+                    </div>`;
+                });
+
+                html += `<div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-4 py-2.5 flex justify-between items-center border-b border-slate-200 bg-slate-100">
+                        <span class="text-sm font-black text-slate-800 truncate">${stlName}</span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-black px-2 py-0.5 rounded-md border ${badgeClass}">${stlBadgeText}</span>
+                            <button type="button" onclick="toggleDailyGroup('${stlGroupId}')" class="h-6 w-6 flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 font-black hover:bg-slate-50 transition-colors shrink-0" aria-label="แสดง/ซ่อนรายชื่อแขวง">
+                                <span id="${stlGroupId}-icon">+</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="${stlGroupId}" class="hidden p-2 space-y-2">${khwaengHtml}</div>
+                </div>`;
+            });
+            return html;
+        }
+
+        // สร้างรายการ "งาน Shapefile" ทั้งหมด (ไม่กรองวันที่) พร้อมสถานะ เสร็จ/คงเหลือ จากคอลัมน์ X (index 23)
+        // เงื่อนไขการนับคำขอ อ้างอิงสูตรเดียวกับในชีท: 'รวมคำขอ'!AP:AP,"<>01.เร่งด่วน", 'รวมคำขอ'!BG:BG,"="
+        // คือ นับเฉพาะแถวที่ AP (index 41) ไม่ใช่ "01.เร่งด่วน" และ BG (index 58) ว่าง
+        function buildAllShapefileRows() {
+            const rows = [];
+            currentSheetData.forEach((row, idx) => {
+                if (idx === 0) return;
+                const reqNo   = row[6] ? row[6].toString().trim() : "";
+                const stlName = row[8] ? row[8].toString().trim() : "";
+                const khwaeng = row[9] ? row[9].toString().trim() : "ไม่ระบุแขวง";
+                if (!reqNo || !stlName) return;
+
+                const apVal = row[41] ? row[41].toString().trim() : ""; // AP
+                const bgVal = row[58] ? row[58].toString().trim() : ""; // BG
+                if (apVal === "01.เร่งด่วน") return; // AP ต้องไม่ใช่ "01.เร่งด่วน"
+                if (bgVal !== "") return;            // BG ต้องว่าง
+
+                const doneVal = row[23] ? row[23].toString().trim() : "";
+                rows.push({ stl: stlName, khwaeng: khwaeng, req: reqNo, type: "", status: doneVal ? 'complete' : 'remaining' });
+            });
+            return rows;
+        }
+
+        // สร้างรายการ "งานแผนที่/แผนผัง" ทั้งหมด (ไม่กรองวันที่) พร้อมสถานะ เสร็จ/คงเหลือ จากคอลัมน์ AM (index 38)
+        // นับเฉพาะคำขอที่ต้องใช้แผนที่ (คอลัมน์ AH/index 33 มีค่าและไม่ใช่ "-")
+        function buildAllMapRows() {
+            const rows = [];
+            currentSheetData.forEach((row, idx) => {
+                if (idx === 0) return;
+                const reqNo   = row[6] ? row[6].toString().trim() : "";
+                const stlName = row[8] ? row[8].toString().trim() : "";
+                const khwaeng = row[9] ? row[9].toString().trim() : "ไม่ระบุแขวง";
+                if (!reqNo || !stlName) return;
+
+                const needsMap = row[33] ? row[33].toString().trim() : "";
+                if (!needsMap || needsMap === "-" || needsMap.toUpperCase() === "X") return; // คำขอนี้ไม่ต้องใช้แผนที่ (ว่าง, "-", หรือ "X")
+
+                const doneVal = row[38] ? row[38].toString().trim() : "";
+                rows.push({ stl: stlName, khwaeng: khwaeng, req: reqNo, type: "", status: doneVal ? 'complete' : 'remaining' });
+            });
+            return rows;
         }
 
         function toggleDailyGroup(groupId) {
@@ -891,6 +1041,31 @@
             }
 
             bodyHtml += `<div class="bg-slate-800 text-white rounded-xl p-4 flex justify-between items-center shadow-md mt-2"><span class="text-base font-black">รวมคำขอวันนี้</span><div class="text-right"><span class="text-xl md:text-2xl font-black">${totalCount.toLocaleString()}</span><span class="text-xs font-bold text-slate-300 ml-1">คำขอ</span></div></div>`;
+
+            modalContainer.innerHTML = bodyHtml;
+            modal.classList.remove('hidden');
+        }
+
+        // แสดงรายละเอียดรายแขวงของแต่ละชิ้นในโดนัทสิ่งแวดล้อม (6 ชิ้น: สมบูรณ์/รอร่างรายงานจากแขวง/คงเหลือ × EAR,EC)
+        function showEnvDonutDetailModal(sliceIndex) {
+            const modal          = document.getElementById('detailsModal');
+            const modalTitle     = document.getElementById('modalTitle');
+            const modalContainer = document.getElementById('modalContainer');
+
+            const slice = envDonutSlices[sliceIndex];
+            if (!slice) return;
+
+            modalTitle.innerHTML = `<span class="h-3 w-1 bg-indigo-500 rounded-full"></span> รายงานสิ่งแวดล้อม ${slice.label} <span class="text-xs text-slate-400 font-normal ml-1">(รวมทุก สทล.)</span>`;
+
+            // ผลรวมต่อ สทล./แขวง ในการ์ดนี้ให้เป็นผลรวมทั้งหมด (ทุกสถานะ: สมบูรณ์/รอแขวง/คงเหลือ) เฉพาะประเภทเดียวกัน (EAR หรือ EC)
+            // ไม่ใช่แค่จำนวนที่อยู่ในสถานะที่กำลังดู (slice.rows) เพื่อให้เห็นภาพรวมงานทั้งหมดของ สทล./แขวง นั้นๆ
+            const totalsRowsForType = buildAllEnvRows().filter(r => r.type === slice.type);
+
+            let bodyHtml = renderNestedRequestGroups(slice.rows, slice.badgeClass, totalsRowsForType);
+            if (!bodyHtml) {
+                bodyHtml = `<div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 font-medium shadow-sm">ไม่มีรายการในส่วนนี้</div>`;
+            }
+            bodyHtml += `<div class="bg-slate-800 text-white rounded-xl p-4 flex justify-between items-center shadow-md mt-2"><span class="text-base font-black">รวมทุกแขวง</span><div class="text-right"><span class="text-xl md:text-2xl font-black">${slice.rows.length.toLocaleString()}</span><span class="text-xs font-bold text-slate-300 ml-1">คำขอ</span></div></div>`;
 
             modalContainer.innerHTML = bodyHtml;
             modal.classList.remove('hidden');
