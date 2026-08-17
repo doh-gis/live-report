@@ -995,10 +995,9 @@
                     }
 
                     // --- Panel Left: สิ่งแวดล้อม badge ---
-                    const totalEnvDraft = Number(summaryRow[40]) || 0;
-                    const totalEnvComp2 = Number(summaryRow[42]) || 0;
-                    let totalEnvRecv = 0;
-
+                    // อ้างอิงคอลัมน์จากชีทสรุป (แถวรายสทล.): AO(40)=ร่างส่งเขต, AP(41)=รับจากแขวง, AS(44)=สมบูรณ์ "รวม" (EAR+EC วันนี้)
+                    // หมายเหตุ: คอลัมน์ "สมบูรณ์" ต้องใช้ AS (รวม) ไม่ใช่ AQ (42, เฉพาะ EAR) เพราะ AQ นับได้แค่ EAR ทำให้ยอดขาดไป
+                    let totalEnvDraft = 0, totalEnvRecv = 0, totalEnvComp2 = 0;
                     let shpHtml = "", mapHtml = "", envDraftHtml = "", envCompHtml = "", envRecvHtml = "";
                     sheetData.forEach(row => {
                         if (row[26] && row[26].toString().startsWith("สทล.")) {
@@ -1007,14 +1006,20 @@
                             if (vShp > 0) shpHtml += `<div class="flex justify-between items-center border-b border-slate-100 py-0.5 text-slate-600"><span>• ${stlName}</span><span class="text-emerald-600 font-extrabold">${vShp} คำขอ</span></div>`;
                             const vMap = Number(row[34]) || 0;
                             if (vMap > 0) mapHtml += `<div class="flex justify-between items-center border-b border-slate-100 py-0.5 text-slate-600"><span>• ${stlName}</span><span class="text-amber-500 font-extrabold">${vMap} คำขอ</span></div>`;
-                            const vEnvDraft = Number(row[40]) || 0;
-                            if (vEnvDraft > 0) envDraftHtml += `<div class="flex justify-between items-center py-0.5 text-slate-600"><span>- ${stlName}</span><span class="font-extrabold text-indigo-600">${vEnvDraft} คำขอ</span></div>`;
-                            const vEnvComp = Number(row[42]) || 0;
-                            if (vEnvComp > 0) envCompHtml += `<div class="flex justify-between items-center py-0.5 text-slate-600"><span>- ${stlName}</span><span class="font-extrabold text-indigo-600">${vEnvComp} คำขอ</span></div>`;
-                            const vEnvRecv = Number(row[41]) || 0;
+                            const vEnvDraft = Number(row[40]) || 0; // AO
+                            if (vEnvDraft > 0) {
+                                totalEnvDraft += vEnvDraft;
+                                envDraftHtml += `<div class="flex justify-between items-center py-0.5 text-slate-600"><span>- ${stlName}</span><span class="font-extrabold text-indigo-600">${vEnvDraft} คำขอ</span></div>`;
+                            }
+                            const vEnvRecv = Number(row[41]) || 0; // AP
                             if (vEnvRecv > 0) {
                                 totalEnvRecv += vEnvRecv;
                                 envRecvHtml += `<div class="flex justify-between items-center py-0.5 text-slate-600"><span>- ${stlName}</span><span class="font-extrabold text-indigo-600">${vEnvRecv} คำขอ</span></div>`;
+                            }
+                            const vEnvComp = Number(row[44]) || 0; // AS = สมบูรณ์ "รวม" (EAR+EC)
+                            if (vEnvComp > 0) {
+                                totalEnvComp2 += vEnvComp;
+                                envCompHtml += `<div class="flex justify-between items-center py-0.5 text-slate-600"><span>- ${stlName}</span><span class="font-extrabold text-indigo-600">${vEnvComp} คำขอ</span></div>`;
                             }
                         }
                     });
