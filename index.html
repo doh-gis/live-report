@@ -156,7 +156,7 @@
     </div>
 
     <!-- ===== STAT CARDS ===== -->
-    <div class="grid grid-cols-2 lg:grid-cols-[2fr_4fr_2fr_2fr] gap-2 md:gap-3 lg:gap-4 shrink-0 mb-[0.4rem] md:mb-[0.6rem] lg:mb-[0.8rem]">
+    <div class="grid grid-cols-1 lg:grid-cols-[2fr_4fr_2fr_2fr] gap-2 md:gap-3 lg:gap-4 shrink-0 mb-[0.4rem] md:mb-[0.6rem] lg:mb-[0.8rem]">
         <div class="bg-white border-t-4 border-t-sky-500 border-x border-b border-slate-200 rounded-xl p-[0.6rem] md:p-[0.8rem] flex flex-col justify-between min-h-[5.6rem] md:min-h-[6.4rem] lg:min-h-[7.2rem] shadow-lg shadow-slate-200/60 stat-card-hover">
             <div class="flex justify-between items-center w-full">
                 <span class="stat-label font-black text-sky-600 uppercase tracking-wider block truncate">1. คำขอทั้งหมดในระบบ</span>
@@ -171,15 +171,16 @@
             </div>
         </div>
 
-        <div class="bg-white border-t-4 border-t-indigo-500 border-x border-b border-slate-200 rounded-xl p-[0.6rem] md:p-[0.8rem] flex flex-col justify-between min-h-[5.6rem] md:min-h-[6.4rem] lg:min-h-[7.2rem] shadow-lg shadow-slate-200/60 stat-card-hover">
+        <div class="col-span-2 lg:col-span-1 bg-white border-t-4 border-t-indigo-500 border-x border-b border-slate-200 rounded-xl p-[0.6rem] md:p-[0.8rem] flex flex-col justify-between min-h-[5.6rem] md:min-h-[6.4rem] lg:min-h-[7.2rem] shadow-lg shadow-slate-200/60 stat-card-hover">
             <div class="flex justify-between items-center">
                 <span class="stat-label font-black text-indigo-600 uppercase tracking-wider block truncate">2. รายงานสิ่งแวดล้อม</span>
                 <span id="env-percent" class="stat-num-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shadow-sm whitespace-nowrap skeleton-number">-%</span>
             </div>
             <div class="mt-auto border-t border-slate-200 pt-1.5">
-                <!-- บรรทัดเดียว: 5 ช่อง (ต้องทำ / สมบูรณ์ / ส่งกลับแล้ว / รอแขวง / เหลือ) จัดกึ่งกลางแบบ flex
-                     ถ้าจอแคบมากจนพื้นที่ไม่พอ จะเลื่อนแนวนอนได้ (overflow-x-auto) แทนการตัด/ห่อข้อความ -->
-                <div class="flex items-center justify-start sm:justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 flex-nowrap overflow-x-auto custom-scrollbar text-center px-0.5">
+                <!-- 5 ช่อง (ต้องทำ / สมบูรณ์ / ส่งกลับแล้ว / รอแขวง / คงเหลือ) จัดกึ่งกลาง
+                     บนจอกว้างพอจะอยู่บรรทัดเดียว ถ้าจอแคบ (มือถือ) จะห่อ (wrap) ขึ้นบรรทัดใหม่แทนการซ่อน/เลื่อนแนวนอน
+                     เพื่อให้เห็นครบทั้ง 5 ค่าเสมอโดยไม่ต้องปัดจอ -->
+                <div class="flex items-start justify-center flex-wrap gap-x-3 gap-y-2 sm:gap-x-4 md:gap-x-6 lg:gap-x-8 text-center px-0.5">
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">ต้องทำ</span>
                         <span id="env-total" class="stat-num-md font-black text-slate-800 skeleton-number">-</span>
@@ -188,7 +189,6 @@
                             <span class="whitespace-nowrap">EC: <span id="env-total-ec" class="text-slate-600 font-black">-</span></span>
                         </div>
                     </div>
-                    <div class="shrink-0 w-px self-stretch bg-slate-200"></div>
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">สมบูรณ์</span>
                         <span id="env-completed" class="stat-num-md font-black text-emerald-600 skeleton-number">-</span>
@@ -198,7 +198,6 @@
                             <span class="whitespace-nowrap">EC: <span id="env-completed-ec" class="text-emerald-600 font-black">-</span></span>
                         </div>
                     </div>
-                    <div class="shrink-0 w-px self-stretch bg-slate-200"></div>
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap" title="แขวงส่งกลับแล้ว (รอส่งสมบูรณ์)">ส่งกลับแล้ว</span>
                         <span id="env-returned" class="stat-num-md font-black text-yellow-500 skeleton-number">-</span>
@@ -207,7 +206,6 @@
                             <span class="whitespace-nowrap">EC: <span id="env-returned-ec" class="text-yellow-500 font-black">-</span></span>
                         </div>
                     </div>
-                    <div class="shrink-0 w-px self-stretch bg-slate-200"></div>
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">รอแขวง</span>
                         <span id="env-waiting" class="stat-num-md font-black text-orange-400 skeleton-number">-</span>
@@ -216,7 +214,6 @@
                             <span class="whitespace-nowrap">EC: <span id="env-waiting-ec" class="text-orange-400 font-black">-</span></span>
                         </div>
                     </div>
-                    <div class="shrink-0 w-px self-stretch bg-slate-200"></div>
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">คงเหลือ</span>
                         <span id="env-remaining" class="stat-num-md font-black text-rose-500 skeleton-number">-</span>
@@ -230,6 +227,10 @@
             </div>
         </div>
 
+        <!-- การ์ด 3 และ 4 จับคู่กันเป็น grid 2 คอลัมน์เสมอ (แม้บนจอเล็ก) เพื่อให้สูงเท่ากันแบบ stretch อัตโนมัติ
+             ส่วนบนจอเดสก์ท็อป (lg) ครอบนี้จะกลายเป็น display:contents (หายไปจาก layout) ทำให้การ์ด 3-4
+             กลับไปเป็นลูกโดยตรงของกริดหลัก 4 คอลัมน์เหมือนเดิมทุกประการ -->
+        <div class="grid grid-cols-2 gap-2 md:gap-3 lg:contents">
         <div class="bg-white border-t-4 border-t-emerald-500 border-x border-b border-slate-200 rounded-xl p-[0.6rem] md:p-[0.8rem] flex flex-col justify-between min-h-[5.6rem] md:min-h-[6.4rem] lg:min-h-[7.2rem] shadow-lg shadow-slate-200/60 stat-card-hover">
             <div class="flex justify-between items-center">
                 <span class="stat-label font-black text-emerald-600 uppercase tracking-wider block truncate">3. Shapefile</span>
@@ -274,6 +275,7 @@
                     <span id="map-remaining-trend"></span>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 
