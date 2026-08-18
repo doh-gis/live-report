@@ -45,6 +45,10 @@
             #panel-left .flex-1.overflow-y-auto {
                 max-height: 340px;
             }
+            /* เพิ่มความสูงกราฟแท่ง 2 อัน (รายงานสิ่งแวดล้อม, Shapefile) เฉพาะตอนเปิดในมือถือ/แนวตั้ง
+               เพื่อให้อ่านค่าบนแท่งกราฟง่ายขึ้น โดยไม่กระทบเวอร์ชันคอม/แนวนอนที่โอเคอยู่แล้ว */
+            #envChartCard { min-height: 420px !important; }
+            #shpChartCard { min-height: 280px !important; }
         }
 
         /* ===== Fluid font-size: ไหลตามความกว้างจอจริง (vw) แทนการกระโดดเป็นขั้นแบบ breakpoint ===== */
@@ -121,7 +125,7 @@
                 ระบบรายงานความก้าวหน้าการขออนุญาตใช้ประโยชน์พื้นที่ป่าไม้
             </h1>
         </div>
-        <div class="bg-slate-50 border border-slate-200 rounded-lg px-3 md:px-5 py-2 flex items-center gap-3 md:gap-5 text-sm md:text-base shrink-0">
+        <div class="bg-slate-50 border border-slate-200 rounded-lg px-3 md:px-5 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 md:gap-x-5 text-sm md:text-base w-full sm:w-auto shrink-0">
             <span id="connection-badge" class="text-emerald-600 font-extrabold flex items-center gap-1.5">
                 <span id="connection-dot" class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span> <span id="connection-text">Connected</span>
             </span>
@@ -132,7 +136,7 @@
                 <svg id="refresh-icon" class="h-4 w-4 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span>รีเฟรช</span>
+                <span class="hidden sm:inline">รีเฟรช</span>
             </button>
             <button id="exit-presentation-btn" type="button" onclick="togglePresentationMode()"
                 class="items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 font-bold text-xs md:text-sm hover:bg-rose-100 active:scale-95 transition-all shrink-0"
@@ -338,10 +342,10 @@
         <div id="panel-right-row" class="flex-1 flex flex-col lg:flex-row gap-3 md:gap-4 lg:gap-5 min-h-0 min-w-0">
 
             <!-- Main: รายงานสิ่งแวดล้อม (Stacked Bar Chart) - จุดสนใจหลักของผู้บริหาร -->
-            <div class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0 min-w-0" style="min-height: 260px;">
+            <div id="envChartCard" class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0 min-w-0" style="min-height: 260px;">
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-2 shrink-0">
                     <h3 class="text-sm md:text-base font-black text-slate-800 flex items-center gap-1.5">
-                        <span class="h-3 w-0.5 bg-indigo-500 rounded-full"></span> ความคืบหน้ารายงานสิ่งแวดล้อม <span class="text-xs font-bold text-slate-400">(คลิกที่แท่งชาร์ตเพื่อดูรายละเอียดรายแขวง)</span>
+                        <span class="h-3 w-0.5 bg-indigo-500 rounded-full"></span> ความคืบหน้ารายงานสิ่งแวดล้อม <span class="text-[10px] md:text-xs font-bold text-slate-400">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
                     </h3>
                     <div class="flex items-center gap-1.5 shrink-0">
                         <button id="envSortBtn" type="button" onclick="toggleEnvSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
@@ -362,14 +366,14 @@
 
             <!-- Side column (30%): Shapefile (บน, ย่อส่วน) + Request Map (ล่าง) -->
             <div id="panel-right-side" class="w-full lg:w-[30%] flex flex-col gap-3 md:gap-4 min-h-0 shrink-0">
-                <div class="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 md:p-3 flex flex-col shadow-md min-h-0" style="min-height: 145px;">
+                <div class="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 md:p-3 flex flex-col shadow-md min-h-0" style="min-height: 145px;" id="shpChartCard">
                     <h4 class="font-black text-slate-800 text-sm md:text-base border-b border-slate-200 pb-1.5 flex items-center gap-1.5 shrink-0">
                         <span class="h-3 w-0.5 bg-emerald-500 rounded-full"></span> ความคืบหน้างาน Shapefile
                         <button id="shpSortBtn" type="button" onclick="toggleShpSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
                             class="ml-auto shrink-0 h-5 w-5 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors">
                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9M3 12h9m-9 4h5m6-9v14m0 0l-3-3m3 3l3-3"/></svg>
                         </button>
-                        <span class="text-[9px] md:text-[10px] font-bold text-slate-400 truncate">(คลิกเพื่อดูรายแขวง)</span>
+                        <span class="text-[10px] md:text-xs font-bold text-slate-400 truncate">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
                     </h4>
                     <div class="flex-1 relative w-full min-h-0 mt-1">
                         <canvas id="shpChart"></canvas>
@@ -378,7 +382,7 @@
 
                 <div class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0" style="min-height: 145px;">
                     <h4 class="font-black text-slate-800 text-sm md:text-base border-b border-slate-200 pb-2 flex items-center gap-1.5 shrink-0">
-                        <span class="h-3 w-0.5 bg-amber-400 rounded-full"></span> ความคืบหน้างานแผนที่คำขอ <span class="text-[10px] font-bold text-slate-400 ml-auto">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
+                        <span class="h-3 w-0.5 bg-amber-400 rounded-full"></span> ความคืบหน้างานแผนที่คำขอ <span class="text-[10px] md:text-xs font-bold text-slate-400 ml-auto">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
                     </h4>
                     <div class="flex-1 relative w-full h-full min-h-0 mt-1">
                         <canvas id="mapPieChart"></canvas>
