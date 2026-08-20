@@ -375,7 +375,7 @@
         <div id="panel-left" class="bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0 shrink-0">
             <h3 class="text-sm font-black text-sky-600 mb-2 flex flex-col gap-1 shrink-0 border-b border-slate-200 pb-2">
                 <span class="flex items-center gap-1.5 text-base">
-                    <span class="h-3 w-1 bg-sky-500 rounded-full"></span> ความคืบหน้า
+                    <span class="h-3 w-3 bg-sky-500 rounded-full"></span> ความคืบหน้า
                 </span>
                 <span id="custom-title-date" class="text-slate-700 pl-2 font-black block truncate text-sm">...</span>
             </h3>
@@ -430,7 +430,7 @@
             <div id="envChartCard" class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0 min-w-0" style="min-height: 260px;">
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-2 shrink-0">
                     <h3 class="text-sm md:text-base font-black text-slate-800 flex items-center gap-1.5">
-                        <span class="h-3 w-1 bg-indigo-500 rounded-full"></span> ความคืบหน้ารายงานสิ่งแวดล้อม <span class="text-[10px] md:text-xs font-bold text-slate-400">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
+                        <span class="h-3 w-3 bg-indigo-500 rounded-full"></span> ความคืบหน้ารายงานสิ่งแวดล้อม <span class="text-[10px] md:text-xs font-bold text-slate-400">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
                     </h3>
                     <div class="flex items-center gap-1.5 shrink-0">
                         <button id="envSortBtn" type="button" onclick="toggleEnvSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
@@ -453,7 +453,7 @@
             <div id="panel-right-side" class="w-full lg:w-[30%] flex flex-col gap-3 md:gap-4 min-h-0 shrink-0">
                 <div class="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 md:p-3 flex flex-col shadow-md min-h-0" style="min-height: 145px;" id="shpChartCard">
                     <h4 class="font-black text-slate-800 text-sm md:text-base border-b border-slate-200 pb-1.5 flex items-center gap-1.5 shrink-0">
-                        <span class="h-3 w-1 bg-emerald-500 rounded-full"></span> ความคืบหน้างาน Shapefile
+                        <span class="h-3 w-3 bg-emerald-500 rounded-full"></span> ความคืบหน้างาน Shapefile
                         <button id="shpSortBtn" type="button" onclick="toggleShpSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
                             class="ml-auto shrink-0 h-5 w-5 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors">
                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9M3 12h9m-9 4h5m6-9v14m0 0l-3-3m3 3l3-3"/></svg>
@@ -467,7 +467,7 @@
 
                 <div class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0" style="min-height: 145px;">
                     <h4 class="font-black text-slate-800 text-sm md:text-base border-b border-slate-200 pb-2 flex items-center gap-1.5 shrink-0">
-                        <span class="h-3 w-1 bg-amber-400 rounded-full"></span> ความคืบหน้างานแผนที่คำขอ <span class="text-[10px] md:text-xs font-bold text-slate-400 ml-auto">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
+                        <span class="h-3 w-3 bg-amber-400 rounded-full"></span> ความคืบหน้างานแผนที่คำขอ <span class="text-[10px] md:text-xs font-bold text-slate-400 ml-auto">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
                     </h4>
                     <div class="flex-1 relative w-full h-full min-h-0 mt-1">
                         <canvas id="mapPieChart"></canvas>
@@ -555,7 +555,7 @@
         // ===== สีตัวอักษร/เส้นกริดของกราฟ ปรับตามโหมดมืด/สว่างแบบสด =====
         function chartTextColor() { return document.body.classList.contains('dark-mode') ? '#e2e8f0' : '#1e293b'; }
         function chartTickColor() { return document.body.classList.contains('dark-mode') ? '#cbd5e1' : '#334155'; }
-        function chartGridColor() { return document.body.classList.contains('dark-mode') ? 'rgba(148,163,184,0.15)' : 'rgba(100, 116, 139, 0.15)'; }
+        function chartGridColor() { return document.body.classList.contains('dark-mode') ? 'rgba(148,163,184,0.10)' : 'rgba(100, 116, 139, 0.08)'; }
 
         // ===== วาด "ป้ายลอยทรงแคปซูล" เหนือแท่งกราฟ (สไตล์เดียวกับตัวเลข % ที่ลอยเหนือแท่งในดีไซน์อ้างอิง) =====
         function drawFloatingBadge(ctx, centerX, topY, text, opts) {
@@ -633,6 +633,22 @@
             if (!el) return;
             el.classList.remove('skeleton-number');
             el.textContent = text;
+        }
+
+        // ===== Badge % แบบไล่สีตามสถานะความคืบหน้า (เขียว/เหลือง/แดง) =====
+        const PERCENT_BADGE_CLASSES = {
+            good: ['text-emerald-600', 'bg-emerald-50', 'border-emerald-200'],
+            mid:  ['text-amber-600',   'bg-amber-50',   'border-amber-200'],
+            low:  ['text-rose-600',    'bg-rose-50',    'border-rose-200']
+        };
+        function setPercentBadge(elId, pct) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.classList.remove('skeleton-number');
+            el.textContent = pct.toFixed(1) + '%';
+            Object.values(PERCENT_BADGE_CLASSES).flat().forEach(c => el.classList.remove(c));
+            const tier = pct >= 90 ? 'good' : (pct >= 50 ? 'mid' : 'low');
+            el.classList.add(...PERCENT_BADGE_CLASSES[tier]);
         }
 
         // ลูกศร ▲/▼ เทียบกับค่ารอบก่อนหน้า (เก็บ snapshot ไว้ใน localStorage ใช้ได้ทั้ง auto-refresh และกดรีเฟรชเอง)
@@ -741,8 +757,8 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'เสร็จสะสม (ลายเส้นทแยง = เสร็จสมบูรณ์แล้ว)', data: comp, backgroundColor: colors, borderRadius: 2 },
-                        { label: 'คงเหลือ', data: rem, backgroundColor: CHART_COLORS.shpRemaining, borderRadius: 2 }
+                        { label: 'เสร็จสะสม (ลายเส้นทแยง = เสร็จสมบูรณ์แล้ว)', data: comp, backgroundColor: colors, borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 2, bottomRight: 2 }, borderSkipped: false },
+                        { label: 'คงเหลือ', data: rem, backgroundColor: CHART_COLORS.shpRemaining, borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 }, borderSkipped: false }
                     ]
                 },
                 options: {
@@ -775,13 +791,12 @@
             if (mapPieChartInstance) mapPieChartInstance.destroy();
             mapPieChartInstance = new Chart(ctxMap, {
                 type: 'doughnut',
-                data: { labels: ['เสร็จสะสม', 'คงเหลือ'], datasets: [{ data: [mapCompVal, mapRemVal], backgroundColor: [CHART_COLORS.mapComplete, CHART_COLORS.mapRemaining], borderWidth: 1, borderColor: '#ffffff' }] },
+                data: { labels: ['เสร็จสะสม', 'คงเหลือ'], datasets: [{ data: [mapCompVal, mapRemVal], backgroundColor: [CHART_COLORS.mapComplete, CHART_COLORS.mapRemaining], borderWidth: 0, borderRadius: 5, spacing: 2, hoverOffset: 6 }] },
                 options: {
-                    responsive: true, maintainAspectRatio: false, layout: { padding: 6 },
+                    responsive: true, maintainAspectRatio: false, layout: { padding: 6 }, cutout: '68%',
                     onClick: (event, elements) => { if (elements.length > 0) showDetailModal('map', 'ทุกภูมิภาค', elements[0].index); },
                     plugins: {
-                        legend: { display: true, position: 'right', align: 'center', labels: { color: chartTextColor(), font: { size: isSmallScreen ? 9 : 11 }, boxWidth: 10, padding: 8 } },
-                        cutout: '50%',
+                        legend: { display: true, position: 'right', align: 'center', labels: { color: chartTextColor(), font: { size: isSmallScreen ? 9 : 11 }, usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 8 } },
                         datalabels: {
                             display: true, color: '#ffffff', font: { weight: '900', size: isSmallScreen ? 9 : 11 }, textAlign: 'center',
                             formatter: (value, ctx) => {
@@ -988,7 +1003,7 @@
                     animateNumber('shp-total', shpTotal);
                     animateNumber('shp-completed', shpComp);
                     animateNumber('shp-remaining', shpRem);
-                    setStatText('shp-percent', shpTotal > 0 ? ((shpComp / shpTotal) * 100).toFixed(1) + '%' : '0%');
+                    setPercentBadge('shp-percent', shpTotal > 0 ? (shpComp / shpTotal) * 100 : 0);
 
                     const mapReq  = Number(summaryRow[32]);
                     const mapComp = Number(summaryRow[35]);
@@ -996,7 +1011,7 @@
                     animateNumber('map-total', mapReq);
                     animateNumber('map-completed', mapComp);
                     animateNumber('map-remaining', mapRem);
-                    setStatText('map-percent', mapReq > 0 ? ((mapComp / mapReq) * 100).toFixed(1) + '%' : '0%');
+                    setPercentBadge('map-percent', mapReq > 0 ? (mapComp / mapReq) * 100 : 0);
 
                     // === การ์ด 4 "รายงานสิ่งแวดล้อม" ===
                     // คำนวณสดจากข้อมูลรายคำขอด้วย buildAllEnvRows() ซึ่งเป็นฟังก์ชันเดียวกับที่ใช้สร้างกราฟโดนัท
@@ -1033,7 +1048,7 @@
                     animateNumber('env-remaining', envRem);
 
                     // % สมบูรณ์ = สมบูรณ์ / ต้องทำ (คำนวณสดให้ตรงกับตัวเลขในการ์ดเดียวกัน)
-                    setStatText('env-percent', envTotal > 0 ? ((envComp / envTotal) * 100).toFixed(1) + '%' : '0%');
+                    setPercentBadge('env-percent', envTotal > 0 ? (envComp / envTotal) * 100 : 0);
 
                     // --- ย่อย EAR/EC ของรายงานสิ่งแวดล้อม ---
                     document.getElementById('env-total-ear').textContent = envTotalEar.toLocaleString();
@@ -1283,10 +1298,10 @@
                     // ลำดับ dataset กำหนดลำดับการซ้อนแท่ง (dataset แรก = ฐานล่างสุด ของแท่ง)
                     // เรียงจากล่างสุด: คงเหลือ -> รอแขวง -> แขวงส่งกลับแล้ว (รอส่งสมบูรณ์) -> สมบูรณ์ (บนสุด)
                     datasets: [
-                        { label: 'คงเหลือ', data: remS, backgroundColor: CHART_COLORS.remaining, borderRadius: 0, maxBarThickness: 42 },
+                        { label: 'คงเหลือ', data: remS, backgroundColor: CHART_COLORS.remaining, borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 2, bottomRight: 2 }, borderSkipped: false, maxBarThickness: 42 },
                         { label: 'รอแขวง', data: waitS, backgroundColor: CHART_COLORS.waiting, borderRadius: 0, maxBarThickness: 42 },
                         { label: 'แขวงส่งกลับแล้ว (รอส่งสมบูรณ์)', data: retS, backgroundColor: CHART_COLORS.returned, borderRadius: 0, maxBarThickness: 42 },
-                        { label: 'สมบูรณ์', data: compS, backgroundColor: CHART_COLORS.complete, borderRadius: 0, maxBarThickness: 42 }
+                        { label: 'สมบูรณ์', data: compS, backgroundColor: CHART_COLORS.complete, borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 }, borderSkipped: false, maxBarThickness: 42 }
                     ]
                 },
                 options: {
