@@ -110,6 +110,91 @@
         body.dark-mode .shadow-md, body.dark-mode .shadow-lg { box-shadow: 0 4px 16px -4px rgba(0,0,0,0.5) !important; }
         body.dark-mode .custom-scrollbar::-webkit-scrollbar-track { background: rgba(51,65,85,0.5); }
 
+        /* ===== Visual theme: cute, minimal, cartoon-like (presentation only) ===== */
+        :root {
+            --candy-ink: #334155;
+            --candy-line: #dce8f5;
+            --candy-shadow: 0 10px 24px rgba(100, 116, 139, 0.10);
+        }
+        body:not(.dark-mode) {
+            background:
+                radial-gradient(circle at 8% 7%, rgba(186, 230, 253, .78) 0 7rem, transparent 7.1rem),
+                radial-gradient(circle at 94% 93%, rgba(254, 215, 170, .55) 0 9rem, transparent 9.1rem),
+                linear-gradient(135deg, #f7fbff 0%, #eef7ff 50%, #fff8f0 100%);
+        }
+        body:not(.dark-mode)::before,
+        body:not(.dark-mode)::after {
+            content: "";
+            position: fixed;
+            z-index: -1;
+            border-radius: 999px;
+            pointer-events: none;
+            opacity: .55;
+        }
+        body:not(.dark-mode)::before { width: 1rem; height: 1rem; background: #fda4af; top: 22%; left: 2%; box-shadow: 1.4rem 2.2rem 0 #c4b5fd, 4rem -.9rem 0 #fde68a; }
+        body:not(.dark-mode)::after { width: .75rem; height: .75rem; background: #86efac; right: 4%; top: 30%; box-shadow: -2rem 2.8rem 0 #93c5fd, -3.7rem -.8rem 0 #f9a8d4; }
+
+        /* Main surfaces */
+        body:not(.dark-mode) .bg-white {
+            border-color: var(--candy-line) !important;
+            box-shadow: var(--candy-shadow) !important;
+        }
+        body:not(.dark-mode) .bg-slate-50 { background-color: #f8fbff !important; }
+        body:not(.dark-mode) .bg-slate-100 { background-color: #edf5ff !important; }
+        body:not(.dark-mode) .border-slate-200,
+        body:not(.dark-mode) .border-slate-100 { border-color: var(--candy-line) !important; }
+        body:not(.dark-mode) .rounded-xl { border-radius: 1.15rem !important; }
+        body:not(.dark-mode) .rounded-lg { border-radius: .85rem !important; }
+
+        /* Header and status controls */
+        body > .bg-white:first-of-type {
+            background: rgba(255,255,255,.88) !important;
+            backdrop-filter: blur(12px);
+            border-top: 3px solid #bae6fd !important;
+        }
+        h1 > span:first-child { box-shadow: 0 0 0 5px rgba(56, 189, 248, .14); }
+        button {
+            border-radius: .8rem !important;
+            transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease !important;
+        }
+        button:hover { transform: translateY(-1px); box-shadow: 0 5px 12px rgba(100, 116, 139, .12); }
+        button:active { transform: translateY(0) scale(.97) !important; }
+
+        /* Summary cards read as soft colour blocks, while their existing status colours remain intact */
+        .stat-card-hover { position: relative; overflow: hidden; }
+        .stat-card-hover::after {
+            content: ""; position: absolute; width: 5.5rem; height: 5.5rem; border-radius: 999px;
+            right: -2.2rem; bottom: -2.7rem; background: currentColor; opacity: .045; pointer-events: none;
+        }
+        body:not(.dark-mode) .stat-card-hover:hover { box-shadow: 0 16px 28px rgba(100, 116, 139, .16) !important; }
+        body:not(.dark-mode) .stat-card-hover .bg-sky-50,
+        body:not(.dark-mode) .stat-card-hover .bg-emerald-50 { border-radius: .75rem; }
+        .trend-badge { border-radius: 999px; padding: 1px 6px; }
+
+        /* Panels, chart headings, and the daily-progress list */
+        #panel-left, #envChartCard, #shpChartCard, #panel-right-side > div {
+            border-top: 3px solid rgba(186, 230, 253, .9) !important;
+        }
+        #panel-left .cursor-pointer {
+            border-radius: 1rem !important;
+            box-shadow: 0 3px 9px rgba(100, 116, 139, .05);
+            transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+        }
+        #panel-left .cursor-pointer:hover { transform: translateX(3px); box-shadow: 0 8px 16px rgba(100, 116, 139, .11); }
+        #envChartCard h3 > span:first-child, #shpChartCard h4 > span:first-child { border-radius: 999px; width: .55rem; }
+
+        /* Softer feedback elements */
+        .toast-item { border: 1px solid #dbeafe; border-radius: 1rem; box-shadow: var(--candy-shadow); }
+        #detailsModal > div { border-radius: 1.4rem !important; border-color: #dbeafe !important; }
+        #detailsModal > div > div:first-child { background: linear-gradient(90deg, #f0f9ff, #faf5ff) !important; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #a5c8e8; border-radius: 999px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #7fb3dc; }
+
+        @media (max-width: 640px) {
+            body:not(.dark-mode)::before, body:not(.dark-mode)::after { display: none; }
+            body { padding: .7rem !important; }
+        }
+
     </style>
 </head>
 <body class="text-slate-800 min-h-screen w-full p-3 md:p-4 lg:p-5 flex flex-col lg:h-screen lg:overflow-hidden box-border text-sm font-semibold">
@@ -290,7 +375,7 @@
         <div id="panel-left" class="bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0 shrink-0">
             <h3 class="text-sm font-black text-sky-600 mb-2 flex flex-col gap-1 shrink-0 border-b border-slate-200 pb-2">
                 <span class="flex items-center gap-1.5 text-base">
-                    <span class="h-3 w-0.5 bg-sky-500 rounded-full"></span> ความคืบหน้า
+                    <span class="h-3 w-1 bg-sky-500 rounded-full"></span> ความคืบหน้า
                 </span>
                 <span id="custom-title-date" class="text-slate-700 pl-2 font-black block truncate text-sm">...</span>
             </h3>
@@ -345,7 +430,7 @@
             <div id="envChartCard" class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0 min-w-0" style="min-height: 260px;">
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-2 shrink-0">
                     <h3 class="text-sm md:text-base font-black text-slate-800 flex items-center gap-1.5">
-                        <span class="h-3 w-0.5 bg-indigo-500 rounded-full"></span> ความคืบหน้ารายงานสิ่งแวดล้อม <span class="text-[10px] md:text-xs font-bold text-slate-400">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
+                        <span class="h-3 w-1 bg-indigo-500 rounded-full"></span> ความคืบหน้ารายงานสิ่งแวดล้อม <span class="text-[10px] md:text-xs font-bold text-slate-400">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
                     </h3>
                     <div class="flex items-center gap-1.5 shrink-0">
                         <button id="envSortBtn" type="button" onclick="toggleEnvSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
@@ -368,7 +453,7 @@
             <div id="panel-right-side" class="w-full lg:w-[30%] flex flex-col gap-3 md:gap-4 min-h-0 shrink-0">
                 <div class="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 md:p-3 flex flex-col shadow-md min-h-0" style="min-height: 145px;" id="shpChartCard">
                     <h4 class="font-black text-slate-800 text-sm md:text-base border-b border-slate-200 pb-1.5 flex items-center gap-1.5 shrink-0">
-                        <span class="h-3 w-0.5 bg-emerald-500 rounded-full"></span> ความคืบหน้างาน Shapefile
+                        <span class="h-3 w-1 bg-emerald-500 rounded-full"></span> ความคืบหน้างาน Shapefile
                         <button id="shpSortBtn" type="button" onclick="toggleShpSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
                             class="ml-auto shrink-0 h-5 w-5 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors">
                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9M3 12h9m-9 4h5m6-9v14m0 0l-3-3m3 3l3-3"/></svg>
@@ -382,7 +467,7 @@
 
                 <div class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0" style="min-height: 145px;">
                     <h4 class="font-black text-slate-800 text-sm md:text-base border-b border-slate-200 pb-2 flex items-center gap-1.5 shrink-0">
-                        <span class="h-3 w-0.5 bg-amber-400 rounded-full"></span> ความคืบหน้างานแผนที่คำขอ <span class="text-[10px] md:text-xs font-bold text-slate-400 ml-auto">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
+                        <span class="h-3 w-1 bg-amber-400 rounded-full"></span> ความคืบหน้างานแผนที่คำขอ <span class="text-[10px] md:text-xs font-bold text-slate-400 ml-auto">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
                     </h4>
                     <div class="flex-1 relative w-full h-full min-h-0 mt-1">
                         <canvas id="mapPieChart"></canvas>
