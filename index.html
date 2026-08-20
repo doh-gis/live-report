@@ -210,13 +210,13 @@
                 ระบบรายงานความก้าวหน้าการขออนุญาตใช้ประโยชน์พื้นที่ป่าไม้
             </h1>
         </div>
-        <div class="bg-slate-50 border border-slate-200 rounded-lg px-3 md:px-5 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 md:gap-x-5 text-sm md:text-base w-full sm:w-auto shrink-0">
-            <span id="connection-badge" class="text-emerald-600 font-extrabold flex items-center gap-1.5">
-                <span id="connection-dot" class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span> <span id="connection-text">Connected</span>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 md:px-5 py-1.5 md:py-2 flex flex-nowrap items-center justify-center gap-x-1.5 sm:gap-x-3 md:gap-x-5 text-sm md:text-base w-full sm:w-auto shrink-0">
+            <span id="connection-badge" class="text-emerald-600 font-extrabold flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-sm md:text-base shrink-0">
+                <span id="connection-dot" class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span> <span id="connection-text">Connected</span>
             </span>
-            <span id="last-updated" class="text-slate-600 font-bold" title="">กำลังโหลดข้อมูล...</span>
+            <span id="last-updated" class="text-slate-600 font-bold text-[10px] sm:text-sm truncate min-w-0" title="">กำลังโหลดข้อมูล...</span>
             <button id="refresh-btn" type="button" onclick="manualRefresh()"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
+                class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
                 aria-label="รีเฟรชข้อมูล">
                 <svg id="refresh-icon" class="h-4 w-4 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -224,19 +224,19 @@
                 <span class="hidden sm:inline">รีเฟรช</span>
             </button>
             <button id="exit-presentation-btn" type="button" onclick="togglePresentationMode()"
-                class="items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 font-bold text-xs md:text-sm hover:bg-rose-100 active:scale-95 transition-all shrink-0"
+                class="items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 font-bold text-xs md:text-sm hover:bg-rose-100 active:scale-95 transition-all shrink-0"
                 aria-label="ออกจากโหมดนำเสนอ" title="ออกจากโหมดนำเสนอ (Esc)">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 <span>ออกจากโหมดนำเสนอ</span>
             </button>
             <button id="presentation-btn" type="button" onclick="togglePresentationMode()"
-                class="no-presentation flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
+                class="no-presentation flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
                 aria-label="โหมดนำเสนอ" title="โหมดนำเสนอ (จอใหญ่/TV)">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 <span class="hidden md:inline">โหมดนำเสนอ</span>
             </button>
             <button id="darkmode-btn" type="button" onclick="toggleDarkMode()"
-                class="no-presentation flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
+                class="no-presentation flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
                 aria-label="สลับโหมดมืด/สว่าง" title="สลับโหมดมืด/สว่าง">
                 <svg id="darkmode-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"/></svg>
                 <span id="darkmode-label" class="hidden md:inline">โหมดมืด</span>
