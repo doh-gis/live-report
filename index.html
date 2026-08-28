@@ -1315,6 +1315,22 @@
             const rawTotalsS = idxs.map(i => rawTotals[i]);
 
             if (envBarChartInstance) envBarChartInstance.destroy();
+            // มนเฉพาะขอบนอกสุดของแท่ง (บนสุด/ล่างสุดที่มีค่า > 0 ในแต่ละ สทล.) ส่วนตรงกลางเป็นเหลี่ยม
+            // ต้องคำนวณเป็นรายแท่ง (ไม่ใช่ผูกไว้ตายตัวกับ dataset คงเหลือ/สมบูรณ์) เพราะบาง สทล. อาจไม่มีคงเหลือ
+            // ทำให้ dataset ถัดไปกลายเป็นฐานล่างสุดจริงของแท่งนั้นแทน
+            const envStackRadius = (datasetIndex, dataIndex, radius = 2) => {
+                const vals = [remS[dataIndex], pendS[dataIndex], waitS[dataIndex], retS[dataIndex], compS[dataIndex]];
+                const nz = vals.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
+                const bottomIdx = nz.length ? nz[0] : -1;
+                const topIdx = nz.length ? nz[nz.length - 1] : -1;
+                const isBottom = datasetIndex === bottomIdx;
+                const isTop = datasetIndex === topIdx;
+                if (!isBottom && !isTop) return 0;
+                return {
+                    bottomLeft: isBottom ? radius : 0, bottomRight: isBottom ? radius : 0,
+                    topLeft: isTop ? radius : 0, topRight: isTop ? radius : 0
+                };
+            };
             envBarChartInstance = new Chart(ctxEnv, {
                 type: 'bar',
                 data: {
@@ -1322,11 +1338,11 @@
                     // ลำดับ dataset กำหนดลำดับการซ้อนแท่ง (dataset แรก = ฐานล่างสุด ของแท่ง)
                     // เรียงจากล่างสุด: คงเหลือ -> รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง) -> รอแขวง -> แขวงส่งกลับแล้ว -> สมบูรณ์ (บนสุด)
                     datasets: [
-                        { label: 'คงเหลือ', data: remS, backgroundColor: CHART_COLORS.remaining, borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 2, bottomRight: 2 }, borderSkipped: false, maxBarThickness: 42 },
-                        { label: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', data: pendS, backgroundColor: CHART_COLORS.pendingBook, borderRadius: 0, maxBarThickness: 42 },
-                        { label: 'รอแขวง', data: waitS, backgroundColor: CHART_COLORS.waiting, borderRadius: 0, maxBarThickness: 42 },
-                        { label: 'แขวงส่งกลับแล้ว', data: retS, backgroundColor: CHART_COLORS.returned, borderRadius: 0, maxBarThickness: 42 },
-                        { label: 'สมบูรณ์', data: compS, backgroundColor: CHART_COLORS.complete, borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 }, borderSkipped: false, maxBarThickness: 42 }
+                        { label: 'คงเหลือ', data: remS, backgroundColor: CHART_COLORS.remaining, borderRadius: (ctx) => envStackRadius(0, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', data: pendS, backgroundColor: CHART_COLORS.pendingBook, borderRadius: (ctx) => envStackRadius(1, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'รอแขวง', data: waitS, backgroundColor: CHART_COLORS.waiting, borderRadius: (ctx) => envStackRadius(2, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'แขวงส่งกลับแล้ว', data: retS, backgroundColor: CHART_COLORS.returned, borderRadius: (ctx) => envStackRadius(3, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'สมบูรณ์', data: compS, backgroundColor: CHART_COLORS.complete, borderRadius: (ctx) => envStackRadius(4, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 }
                     ]
                 },
                 options: {
@@ -1558,17 +1574,32 @@
             // ลำดับเดียวกับกราฟแท่งด้านนอก: คงเหลือ -> รอจัดทำเล่มสมบูรณ์ -> รอแขวง -> แขวงส่งกลับแล้ว -> สมบูรณ์
             const statusByDatasetIndex = ['remaining', 'pendingBook', 'waiting', 'returned', 'complete'];
             const total = c.complete + c.returned + c.waiting + c.remaining + c.pendingBook;
+            // มนเฉพาะขอบนอกสุดของแท่งทั้งเส้น (ซ้ายสุด/ขวาสุดที่มีค่า > 0) ส่วนตรงกลางเป็นเหลี่ยม
+            // ไม่งั้นทุกส่วนจะมนทั้ง 2 ข้างพร้อมกัน ทำให้แท่งที่มีหลายสีดูเป็นเหลี่ยม/มนปนกันไม่สม่ำเสมอ
+            const segValues = [c.remaining, c.pendingBook, c.waiting, c.returned, c.complete];
+            const nonZeroIdx = segValues.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
+            const firstIdx = nonZeroIdx.length ? nonZeroIdx[0] : -1;
+            const lastIdx = nonZeroIdx.length ? nonZeroIdx[nonZeroIdx.length - 1] : -1;
+            const radiusFor = (idx) => {
+                const isFirst = idx === firstIdx;
+                const isLast = idx === lastIdx;
+                if (!isFirst && !isLast) return 0;
+                return {
+                    topLeft: isFirst ? 4 : 0, bottomLeft: isFirst ? 4 : 0,
+                    topRight: isLast ? 4 : 0, bottomRight: isLast ? 4 : 0
+                };
+            };
             if (onSegmentClick) canvas.style.cursor = 'pointer';
             new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: [''],
                     datasets: [
-                        { label: 'คงเหลือ', data: [c.remaining], backgroundColor: CHART_COLORS.remaining, borderRadius: 4, borderSkipped: false },
-                        { label: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', data: [c.pendingBook], backgroundColor: CHART_COLORS.pendingBook, borderRadius: 4, borderSkipped: false },
-                        { label: 'รอแขวง', data: [c.waiting], backgroundColor: CHART_COLORS.waiting, borderRadius: 4, borderSkipped: false },
-                        { label: 'แขวงส่งกลับแล้ว', data: [c.returned], backgroundColor: CHART_COLORS.returned, borderRadius: 4, borderSkipped: false },
-                        { label: 'สมบูรณ์', data: [c.complete], backgroundColor: CHART_COLORS.complete, borderRadius: 4, borderSkipped: false }
+                        { label: 'คงเหลือ', data: [c.remaining], backgroundColor: CHART_COLORS.remaining, borderRadius: radiusFor(0), borderSkipped: false },
+                        { label: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', data: [c.pendingBook], backgroundColor: CHART_COLORS.pendingBook, borderRadius: radiusFor(1), borderSkipped: false },
+                        { label: 'รอแขวง', data: [c.waiting], backgroundColor: CHART_COLORS.waiting, borderRadius: radiusFor(2), borderSkipped: false },
+                        { label: 'แขวงส่งกลับแล้ว', data: [c.returned], backgroundColor: CHART_COLORS.returned, borderRadius: radiusFor(3), borderSkipped: false },
+                        { label: 'สมบูรณ์', data: [c.complete], backgroundColor: CHART_COLORS.complete, borderRadius: radiusFor(4), borderSkipped: false }
                     ]
                 },
                 options: {
