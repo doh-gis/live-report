@@ -266,10 +266,10 @@
                 <span id="env-percent" class="stat-num-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shadow-sm whitespace-nowrap skeleton-number">-%</span>
             </div>
             <div class="mt-auto border-t border-slate-200 pt-1.5">
-                <!-- 5 ช่อง (ต้องทำ / สมบูรณ์ / ส่งกลับแล้ว / รอแขวง / คงเหลือ) จัดกึ่งกลาง
+                <!-- 6 ช่อง (ต้องทำ / สมบูรณ์ / ส่งกลับแล้ว / รอแขวง / คงเหลือ / รอทำเล่ม) จัดกึ่งกลาง
                      บนจอกว้างพอจะอยู่บรรทัดเดียว ถ้าจอแคบ (มือถือ) จะห่อ (wrap) ขึ้นบรรทัดใหม่แทนการซ่อน/เลื่อนแนวนอน
-                     เพื่อให้เห็นครบทั้ง 5 ค่าเสมอโดยไม่ต้องปัดจอ -->
-                <div class="flex items-start justify-center flex-wrap gap-x-3 gap-y-2 sm:gap-x-4 md:gap-x-6 lg:gap-x-8 text-center px-0.5">
+                     เพื่อให้เห็นครบทั้ง 6 ค่าเสมอโดยไม่ต้องปัดจอ (ระยะห่างบีบแน่นขึ้นเพื่อรองรับ 6 ช่อง) -->
+                <div class="flex items-start justify-center flex-wrap gap-x-2 gap-y-1.5 sm:gap-x-2.5 md:gap-x-3.5 lg:gap-x-4 text-center px-0.5">
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">ต้องทำ</span>
                         <span id="env-total" class="stat-num-md font-black text-slate-800 skeleton-number">-</span>
@@ -280,36 +280,44 @@
                     </div>
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">สมบูรณ์</span>
-                        <span id="env-completed" class="stat-num-md font-black text-emerald-600 skeleton-number">-</span>
+                        <span id="env-completed" class="stat-num-md font-black text-[#40C79A] skeleton-number">-</span>
                         <span id="env-completed-trend"></span>
-                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-emerald-400 leading-tight">
-                            <span class="whitespace-nowrap">EAR: <span id="env-completed-ear" class="text-emerald-600 font-black">-</span></span>
-                            <span class="whitespace-nowrap">EC: <span id="env-completed-ec" class="text-emerald-600 font-black">-</span></span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#40C79A]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-completed-ear" class="text-[#40C79A] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-completed-ec" class="text-[#40C79A] font-black">-</span></span>
                         </div>
                     </div>
                     <div class="shrink-0">
-                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap" title="แขวงส่งกลับแล้ว (รอส่งสมบูรณ์)">ส่งกลับแล้ว</span>
-                        <span id="env-returned" class="stat-num-md font-black text-yellow-500 skeleton-number">-</span>
-                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-yellow-400 leading-tight">
-                            <span class="whitespace-nowrap">EAR: <span id="env-returned-ear" class="text-yellow-500 font-black">-</span></span>
-                            <span class="whitespace-nowrap">EC: <span id="env-returned-ec" class="text-yellow-500 font-black">-</span></span>
+                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap" title="แขวงส่งกลับแล้ว">ส่งกลับแล้ว</span>
+                        <span id="env-returned" class="stat-num-md font-black text-[#98CF59] skeleton-number">-</span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#98CF59]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-returned-ear" class="text-[#98CF59] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-returned-ec" class="text-[#98CF59] font-black">-</span></span>
                         </div>
                     </div>
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">รอแขวง</span>
-                        <span id="env-waiting" class="stat-num-md font-black text-orange-400 skeleton-number">-</span>
-                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-orange-300 leading-tight">
-                            <span class="whitespace-nowrap">EAR: <span id="env-waiting-ear" class="text-orange-400 font-black">-</span></span>
-                            <span class="whitespace-nowrap">EC: <span id="env-waiting-ec" class="text-orange-400 font-black">-</span></span>
+                        <span id="env-waiting" class="stat-num-md font-black text-[#FDE68A] skeleton-number">-</span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#FDE68A]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-waiting-ear" class="text-[#FDE68A] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-waiting-ec" class="text-[#FDE68A] font-black">-</span></span>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap" title="รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)">รอทำเล่ม</span>
+                        <span id="env-pendingbook" class="stat-num-md font-black text-[#FFB066] skeleton-number" title="ขาดข้อมูลจากแขวง">-</span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#FFB066]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-pendingbook-ear" class="text-[#FFB066] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-pendingbook-ec" class="text-[#FFB066] font-black">-</span></span>
                         </div>
                     </div>
                     <div class="shrink-0">
                         <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">คงเหลือ</span>
-                        <span id="env-remaining" class="stat-num-md font-black text-rose-500 skeleton-number">-</span>
+                        <span id="env-remaining" class="stat-num-md font-black text-[#E74A6D] skeleton-number">-</span>
                         <span id="env-remaining-trend"></span>
-                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-rose-400 leading-tight">
-                            <span class="whitespace-nowrap">EAR: <span id="env-remaining-ear" class="text-rose-500 font-black">-</span></span>
-                            <span class="whitespace-nowrap">EC: <span id="env-remaining-ec" class="text-rose-500 font-black">-</span></span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#E74A6D]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-remaining-ear" class="text-[#E74A6D] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-remaining-ec" class="text-[#E74A6D] font-black">-</span></span>
                         </div>
                     </div>
                 </div>
@@ -519,19 +527,21 @@
         // เก็บข้อมูลดิบ (จำนวนจริง) ต่อ สทล. ไว้ใช้สลับโหมด จำนวนงาน / % ความสำเร็จ โดยไม่ยิง API ซ้ำ
         let envBarLabels = [];
         let envBarCompletedRaw = [];
-        let envBarReturnedRaw = []; // แขวงส่งกลับแล้ว (รอส่งสมบูรณ์) = AE มีวันที่ แต่ AF ยังไม่ส่ง
+        let envBarReturnedRaw = []; // แขวงส่งกลับแล้ว = AE มีวันที่ แต่ AF ยังไม่ส่ง
         let envBarWaitingRaw = [];
         let envBarRemainingRaw = [];
+        let envBarPendingBookRaw = []; // รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง) = แยกจาก "คงเหลือ" เดิม ตามคอลัมน์ AA (ซ้ำ/สับเซต)
         let envChartMode = 'count'; // 'count' = จำนวนงาน, 'percent' = % ความสำเร็จ (100% stacked)
 
         // ===== สีของกราฟทั้งหมด (single source of truth) =====
         // ลดความสดของสีเดิมลงเหลือ ~80% (ผสมกับสีขาว 20%) เพื่อให้ดูนุ่มนวลขึ้น ใช้ค่าเดียวกันนี้
         // ทั้งในกราฟแท่ง/โดนัททุกตัว, legend swatch ในโมดัล, และ accent class ที่คลิกจากกราฟ
         const CHART_COLORS = {
-            complete:  '#40C79A', // เขียว (เท่ากับ shpComplete)      — สมบูรณ์ (รายงานสิ่งแวดล้อม)
-            returned:  '#FDE68A', // เหลืองอ่อน (โทนอ่อนลง)            — แขวงส่งกลับแล้ว (รอส่งสมบูรณ์)
-            waiting:   '#FFB066', // ส้มอ่อน (ปรับให้สว่างขึ้น)         — รอแขวง
-            remaining: '#E74A6D', // เดิม — คงเหลือ (รายงานสิ่งแวดล้อม)
+            complete:  '#40C79A', // เขียว (เดิม, คงไว้)                — สมบูรณ์ (รายงานสิ่งแวดล้อม)
+            returned:  '#98CF59', // เขียวอ่อน/เหลืองอมเขียว (สีใหม่)   — แขวงส่งกลับแล้ว
+            waiting:   '#FDE68A', // เหลือง (เดิม, คงไว้)               — รอแขวง
+            remaining: '#E74A6D', // แดง (เดิม, คงไว้)                  — คงเหลือ (รายงานสิ่งแวดล้อม)
+            pendingBook: '#FFB066', // ส้ม (เดิม, คงไว้)                — รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)
             shpComplete:        '#40C79A',              // เดิม — Shapefile เสร็จสมบูรณ์แล้ว (ลายทแยง)
             shpCompletePartial: 'rgba(16, 185, 129, 0.52)', // เดิม — Shapefile เสร็จบางส่วน
             shpRemaining:       '#F6657E',              // เดิม — Shapefile คงเหลือ
@@ -711,7 +721,7 @@
             const num = getStlNum(stlLabel);
             let rows;
             if (kind === 'shp') rows = buildAllShapefileRows().filter(r => getStlNum(r.stl) === num && r.status === 'remaining');
-            else rows = buildAllEnvRows().filter(r => getStlNum(r.stl) === num && (r.type === 'EAR' || r.type === 'EC') && r.envStatus4 === 'remaining');
+            else rows = buildAllEnvRows().filter(r => getStlNum(r.stl) === num && (r.type === 'EAR' || r.type === 'EC') && r.envStatus5 === 'remaining');
             const counts = {};
             rows.forEach(r => { counts[r.khwaeng] = (counts[r.khwaeng] || 0) + 1; });
             return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -1020,25 +1030,31 @@
                     const envRowsForCard = buildAllEnvRows();
                     const envCompEarRows = envRowsForCard.filter(r => r.envStatus4 === 'complete' && r.type === 'EAR');
                     const envCompEcRows  = envRowsForCard.filter(r => r.envStatus4 === 'complete' && r.type === 'EC');
-                    // แขวงส่งกลับแล้ว (รอส่งสมบูรณ์): ใช้ envStatus4 (single source of truth จาก buildAllEnvRows)
+                    // แขวงส่งกลับแล้ว: ใช้ envStatus4 (single source of truth จาก buildAllEnvRows)
                     const envRetEarRows  = envRowsForCard.filter(r => r.envStatus4 === 'returned' && r.type === 'EAR');
                     const envRetEcRows   = envRowsForCard.filter(r => r.envStatus4 === 'returned' && r.type === 'EC');
                     const envWaitEarRows = envRowsForCard.filter(r => r.envStatus4 === 'waiting'  && r.type === 'EAR');
                     const envWaitEcRows  = envRowsForCard.filter(r => r.envStatus4 === 'waiting'  && r.type === 'EC');
-                    const envRemEarRows  = envRowsForCard.filter(r => r.envStatus4 === 'remaining' && r.type === 'EAR');
-                    const envRemEcRows   = envRowsForCard.filter(r => r.envStatus4 === 'remaining' && r.type === 'EC');
+                    // "คงเหลือ" / "รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)": ใช้ envStatus5 (แยกจาก envStatus4 เดิม)
+                    // เพื่อดึงกรณี "ซ้ำ/สับเซต" (คอลัมน์ AA) ออกจาก "คงเหลือ" เดิม โดยไม่กระทบสถานะอื่น (complete/returned/waiting)
+                    const envRemEarRows  = envRowsForCard.filter(r => r.envStatus5 === 'remaining' && r.type === 'EAR');
+                    const envRemEcRows   = envRowsForCard.filter(r => r.envStatus5 === 'remaining' && r.type === 'EC');
+                    const envPendEarRows = envRowsForCard.filter(r => r.envStatus5 === 'pendingBook' && r.type === 'EAR');
+                    const envPendEcRows  = envRowsForCard.filter(r => r.envStatus5 === 'pendingBook' && r.type === 'EC');
 
                     const envCompEar = envCompEarRows.length, envCompEc = envCompEcRows.length;
                     const envRetEar  = envRetEarRows.length,  envRetEc  = envRetEcRows.length;
                     const envWaitEar = envWaitEarRows.length, envWaitEc = envWaitEcRows.length;
                     const envRemEar  = envRemEarRows.length,  envRemEc  = envRemEcRows.length;
+                    const envPendEar = envPendEarRows.length, envPendEc = envPendEcRows.length;
 
-                    const envTotalEar = envCompEar + envRetEar + envWaitEar + envRemEar;
-                    const envTotalEc  = envCompEc  + envRetEc  + envWaitEc  + envRemEc;
+                    const envTotalEar = envCompEar + envRetEar + envWaitEar + envRemEar + envPendEar;
+                    const envTotalEc  = envCompEc  + envRetEc  + envWaitEc  + envRemEc  + envPendEc;
                     const envComp  = envCompEar + envCompEc;
                     const envRet   = envRetEar  + envRetEc;
                     const envWait  = envWaitEar + envWaitEc;
                     const envRem   = envRemEar  + envRemEc;
+                    const envPend  = envPendEar + envPendEc;
                     const envTotal = envTotalEar + envTotalEc;
 
                     animateNumber('env-total', envTotal);
@@ -1046,6 +1062,7 @@
                     animateNumber('env-returned', envRet);
                     animateNumber('env-waiting', envWait);
                     animateNumber('env-remaining', envRem);
+                    animateNumber('env-pendingbook', envPend);
 
                     // % สมบูรณ์ = สมบูรณ์ / ต้องทำ (คำนวณสดให้ตรงกับตัวเลขในการ์ดเดียวกัน)
                     setPercentBadge('env-percent', envTotal > 0 ? (envComp / envTotal) * 100 : 0);
@@ -1061,6 +1078,8 @@
                     document.getElementById('env-waiting-ec').textContent    = envWaitEc.toLocaleString();
                     document.getElementById('env-remaining-ear').textContent = envRemEar.toLocaleString();
                     document.getElementById('env-remaining-ec').textContent  = envRemEc.toLocaleString();
+                    document.getElementById('env-pendingbook-ear').textContent = envPendEar.toLocaleString();
+                    document.getElementById('env-pendingbook-ec').textContent  = envPendEc.toLocaleString();
 
                     // --- Panel Left (กรอบ 2): Shapefile badge ---
                     const totalShpDate = Number(summaryRow[28]) || 0;
@@ -1219,14 +1238,17 @@
                 envBarReturnedRaw = [];
                 envBarWaitingRaw = [];
                 envBarRemainingRaw = [];
+                envBarPendingBookRaw = [];
                 envBarLabels.forEach(lbl => {
                     const num = getStlNum(lbl);
                     const rowsForStl = allEnvRows.filter(r => getStlNum(r.stl) === num);
                     envBarCompletedRaw.push(rowsForStl.filter(r => r.envStatus4 === 'complete').length);
-                    // แขวงส่งกลับแล้ว (รอส่งสมบูรณ์): ใช้ envStatus4 (single source of truth จาก buildAllEnvRows)
+                    // แขวงส่งกลับแล้ว: ใช้ envStatus4 (single source of truth จาก buildAllEnvRows)
                     envBarReturnedRaw.push(rowsForStl.filter(r => r.envStatus4 === 'returned').length);
                     envBarWaitingRaw.push(rowsForStl.filter(r => r.envStatus4 === 'waiting').length);
-                    envBarRemainingRaw.push(rowsForStl.filter(r => r.envStatus4 === 'remaining').length);
+                    // คงเหลือ / รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง): ใช้ envStatus5 เพื่อแยกกรณี AA = ซ้ำ/สับเซต ออกจาก "คงเหลือ" เดิม
+                    envBarRemainingRaw.push(rowsForStl.filter(r => r.envStatus5 === 'remaining').length);
+                    envBarPendingBookRaw.push(rowsForStl.filter(r => r.envStatus5 === 'pendingBook').length);
                 });
                 renderEnvBarChart();
 
@@ -1253,31 +1275,32 @@
         // คำนวณ dataset ตามโหมดที่เลือก: 'count' = จำนวนงานจริง, 'percent' = 100% stacked (เทียบสัดส่วนโดยไม่สนขนาดงาน)
         function computeEnvChartDatasets() {
             if (envChartMode === 'percent') {
-                const comp = [], ret = [], wait = [], rem = [];
+                const comp = [], ret = [], wait = [], rem = [], pend = [];
                 envBarLabels.forEach((_, i) => {
-                    const total = envBarCompletedRaw[i] + envBarReturnedRaw[i] + envBarWaitingRaw[i] + envBarRemainingRaw[i];
+                    const total = envBarCompletedRaw[i] + envBarReturnedRaw[i] + envBarWaitingRaw[i] + envBarRemainingRaw[i] + envBarPendingBookRaw[i];
                     if (total > 0) {
                         comp.push(+(envBarCompletedRaw[i] / total * 100).toFixed(1));
                         ret.push(+(envBarReturnedRaw[i] / total * 100).toFixed(1));
                         wait.push(+(envBarWaitingRaw[i] / total * 100).toFixed(1));
                         rem.push(+(envBarRemainingRaw[i] / total * 100).toFixed(1));
+                        pend.push(+(envBarPendingBookRaw[i] / total * 100).toFixed(1));
                     } else {
-                        comp.push(0); ret.push(0); wait.push(0); rem.push(0);
+                        comp.push(0); ret.push(0); wait.push(0); rem.push(0); pend.push(0);
                     }
                 });
-                return { comp, ret, wait, rem };
+                return { comp, ret, wait, rem, pend };
             }
-            return { comp: envBarCompletedRaw, ret: envBarReturnedRaw, wait: envBarWaitingRaw, rem: envBarRemainingRaw };
+            return { comp: envBarCompletedRaw, ret: envBarReturnedRaw, wait: envBarWaitingRaw, rem: envBarRemainingRaw, pend: envBarPendingBookRaw };
         }
 
         function renderEnvBarChart() {
             const canvas = document.getElementById('envBarChart');
             if (!canvas) return;
             const ctxEnv = canvas.getContext('2d');
-            const { comp, ret, wait, rem } = computeEnvChartDatasets();
+            const { comp, ret, wait, rem, pend } = computeEnvChartDatasets();
             const isPercent = envChartMode === 'percent';
             // ยอดรวมจริง (จำนวนคำขอ) ต่อ สทล. ไว้แสดงเป็นตัวเลขสรุปเหนือแท่ง ไม่ว่าจะอยู่โหมดจำนวนงาน/% ก็ตาม
-            const rawTotals = envBarLabels.map((_, i) => envBarCompletedRaw[i] + envBarReturnedRaw[i] + envBarWaitingRaw[i] + envBarRemainingRaw[i]);
+            const rawTotals = envBarLabels.map((_, i) => envBarCompletedRaw[i] + envBarReturnedRaw[i] + envBarWaitingRaw[i] + envBarRemainingRaw[i] + envBarPendingBookRaw[i]);
 
             // เรียง: ใช้ค่า "คงเหลือ" ดิบ (envBarRemainingRaw) เป็นเกณฑ์เรียงเสมอ ไม่ว่าจะอยู่โหมดจำนวนงาน/% ก็ตาม
             let idxs = envBarLabels.map((_, i) => i);
@@ -1288,6 +1311,7 @@
             const retS    = idxs.map(i => ret[i]);
             const waitS   = idxs.map(i => wait[i]);
             const remS    = idxs.map(i => rem[i]);
+            const pendS   = idxs.map(i => pend[i]);
             const rawTotalsS = idxs.map(i => rawTotals[i]);
 
             if (envBarChartInstance) envBarChartInstance.destroy();
@@ -1296,11 +1320,12 @@
                 data: {
                     labels: labels,
                     // ลำดับ dataset กำหนดลำดับการซ้อนแท่ง (dataset แรก = ฐานล่างสุด ของแท่ง)
-                    // เรียงจากล่างสุด: คงเหลือ -> รอแขวง -> แขวงส่งกลับแล้ว (รอส่งสมบูรณ์) -> สมบูรณ์ (บนสุด)
+                    // เรียงจากล่างสุด: คงเหลือ -> รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง) -> รอแขวง -> แขวงส่งกลับแล้ว -> สมบูรณ์ (บนสุด)
                     datasets: [
                         { label: 'คงเหลือ', data: remS, backgroundColor: CHART_COLORS.remaining, borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 2, bottomRight: 2 }, borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', data: pendS, backgroundColor: CHART_COLORS.pendingBook, borderRadius: 0, maxBarThickness: 42 },
                         { label: 'รอแขวง', data: waitS, backgroundColor: CHART_COLORS.waiting, borderRadius: 0, maxBarThickness: 42 },
-                        { label: 'แขวงส่งกลับแล้ว (รอส่งสมบูรณ์)', data: retS, backgroundColor: CHART_COLORS.returned, borderRadius: 0, maxBarThickness: 42 },
+                        { label: 'แขวงส่งกลับแล้ว', data: retS, backgroundColor: CHART_COLORS.returned, borderRadius: 0, maxBarThickness: 42 },
                         { label: 'สมบูรณ์', data: compS, backgroundColor: CHART_COLORS.complete, borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 }, borderSkipped: false, maxBarThickness: 42 }
                     ]
                 },
@@ -1315,7 +1340,19 @@
                         }
                     },
                     plugins: {
-                        legend: { position: 'top', labels: { color: chartTextColor(), font: { size: isSmallScreen ? 10 : 12, weight: '800' }, boxWidth: 10 } },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: chartTextColor(), font: { size: isSmallScreen ? 10 : 12, weight: '800' }, boxWidth: 10,
+                                // เรียง legend ให้ตรงกับลำดับการ์ดด้านบน (สมบูรณ์ -> ส่งกลับแล้ว -> รอแขวง -> รอทำเล่ม -> คงเหลือ)
+                                // โดยไม่กระทบลำดับ dataset จริงที่กำหนดการซ้อนแท่ง
+                                generateLabels: (chart) => {
+                                    const order = ['สมบูรณ์', 'แขวงส่งกลับแล้ว', 'รอแขวง', 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', 'คงเหลือ'];
+                                    const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                    return order.map(lbl => original.find(o => o.text === lbl)).filter(Boolean);
+                                }
+                            }
+                        },
                         datalabels: { display: false },
                         tooltip: {
                             titleFont: { family: 'Sarabun', weight: '800' }, bodyFont: { family: 'Sarabun' },
@@ -1394,12 +1431,13 @@
             });
             const khwaengNames = Object.keys(khwaengMap).sort((a, b) => a.localeCompare(b, 'th'));
 
-            // เรียง/คำนวณ 4 สถานะโดยใช้ r.envStatus4 (single source of truth จาก buildAllEnvRows) ให้ตรงกับทุกจุดของระบบ
+            // เรียง/คำนวณ 5 สถานะโดยใช้ r.envStatus5 (แยก "รอจัดทำเล่มสมบูรณ์" ออกจาก "คงเหลือ" เดิม) ให้ตรงกับการ์ด 2 และกราฟหลัก
             const countOf = rows => ({
-                complete:  rows.filter(r => r.envStatus4 === 'complete').length,
-                returned:  rows.filter(r => r.envStatus4 === 'returned').length,
-                waiting:   rows.filter(r => r.envStatus4 === 'waiting').length,
-                remaining: rows.filter(r => r.envStatus4 === 'remaining').length
+                complete:    rows.filter(r => r.envStatus5 === 'complete').length,
+                returned:    rows.filter(r => r.envStatus5 === 'returned').length,
+                waiting:     rows.filter(r => r.envStatus5 === 'waiting').length,
+                remaining:   rows.filter(r => r.envStatus5 === 'remaining').length,
+                pendingBook: rows.filter(r => r.envStatus5 === 'pendingBook').length
             });
 
             let bodyHtml = '<div class="space-y-4">';
@@ -1428,8 +1466,9 @@
                             <div style="height: 48px;"><canvas id="${earCanvasId}"></canvas></div>
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-[11px] font-bold text-slate-600">
                                 <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.remaining}"></span> คงเหลือ ${earC.remaining}</span>
+                                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.pendingBook}"></span> รอทำเล่มสมบูรณ์ ${earC.pendingBook}</span>
                                 <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.waiting}"></span> รอแขวง ${earC.waiting}</span>
-                                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.returned}"></span> แขวงส่งกลับแล้ว (รอส่งสมบูรณ์) ${earC.returned}</span>
+                                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.returned}"></span> แขวงส่งกลับแล้ว ${earC.returned}</span>
                                 <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.complete}"></span> สมบูรณ์ ${earC.complete}</span>
                             </div>
                         </div>
@@ -1441,8 +1480,9 @@
                             <div style="height: 48px;"><canvas id="${ecCanvasId}"></canvas></div>
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-[11px] font-bold text-slate-600">
                                 <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.remaining}"></span> คงเหลือ ${ecC.remaining}</span>
+                                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.pendingBook}"></span> รอทำเล่มสมบูรณ์ ${ecC.pendingBook}</span>
                                 <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.waiting}"></span> รอแขวง ${ecC.waiting}</span>
-                                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.returned}"></span> แขวงส่งกลับแล้ว (รอส่งสมบูรณ์) ${ecC.returned}</span>
+                                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.returned}"></span> แขวงส่งกลับแล้ว ${ecC.returned}</span>
                                 <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS.complete}"></span> สมบูรณ์ ${ecC.complete}</span>
                             </div>
                         </div>
@@ -1463,23 +1503,24 @@
         }
 
         // ===== MODAL: รายคำขอจริงของแขวง+ประเภทรายงาน (+สถานะที่คลิก) เหมือนเวอร์ชันเดิม =====
-        // status: 'complete' | 'returned' | 'waiting' | 'remaining' | null (null = ไม่กรองสถานะ แสดงทั้งหมด)
-        const ENV_STATUS_LABEL = { complete: 'สมบูรณ์', returned: 'แขวงส่งกลับแล้ว (รอส่งสมบูรณ์)', waiting: 'รอแขวง', remaining: 'คงเหลือ' };
-        const ENV_STATUS_TEXT_CLASS = { complete: 'text-emerald-600', returned: 'text-yellow-500', waiting: 'text-orange-400', remaining: 'text-rose-500' };
+        // status: 'complete' | 'returned' | 'waiting' | 'remaining' | 'pendingBook' | null (null = ไม่กรองสถานะ แสดงทั้งหมด)
+        const ENV_STATUS_LABEL = { complete: 'สมบูรณ์', returned: 'แขวงส่งกลับแล้ว', waiting: 'รอแขวง', remaining: 'คงเหลือ', pendingBook: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)' };
+        const ENV_STATUS_TEXT_CLASS = { complete: 'text-[#40C79A]', returned: 'text-[#98CF59]', waiting: 'text-[#FDE68A]', remaining: 'text-[#E74A6D]', pendingBook: 'text-[#FFB066]' };
         // แถบสี accent ของโมดัล ใช้สีเดียวกับ CHART_COLORS เป๊ะๆ (single source of truth เดียวกับกราฟ) แทน Tailwind class ตายตัว
-        const ENV_STATUS_ACCENT_COLOR = { complete: CHART_COLORS.complete, returned: CHART_COLORS.returned, waiting: CHART_COLORS.waiting, remaining: CHART_COLORS.remaining };
+        const ENV_STATUS_ACCENT_COLOR = { complete: CHART_COLORS.complete, returned: CHART_COLORS.returned, waiting: CHART_COLORS.waiting, remaining: CHART_COLORS.remaining, pendingBook: CHART_COLORS.pendingBook };
         const ENV_STATUS_BADGE_CLASS = {
-            complete: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-            returned: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-            waiting: 'bg-orange-50 text-orange-700 border-orange-200',
-            remaining: 'bg-rose-50 text-rose-700 border-rose-200'
+            complete: 'bg-[#40C79A]/10 text-[#2F9D7A] border-[#40C79A]/30',
+            returned: 'bg-[#98CF59]/10 text-[#6E9E3C] border-[#98CF59]/30',
+            waiting: 'bg-[#FDE68A]/10 text-[#A6790A] border-[#FDE68A]/30',
+            remaining: 'bg-[#E74A6D]/10 text-[#C13152] border-[#E74A6D]/30',
+            pendingBook: 'bg-[#FFB066]/10 text-[#C2670A] border-[#FFB066]/30'
         };
 
         // ตรวจว่าคำขอ (row จาก buildAllEnvRows) เข้าเงื่อนไขสถานะที่ระบุหรือไม่
-        // ใช้ r.envStatus4 (คำนวณครั้งเดียวใน buildAllEnvRows) เป็นแหล่งความจริงจุดเดียวทั้งระบบ
+        // ใช้ r.envStatus5 (คำนวณครั้งเดียวใน buildAllEnvRows) เป็นแหล่งความจริงจุดเดียวทั้งระบบ (แยก pendingBook ออกจาก remaining)
         function envRowMatchesStatus(r, status) {
             if (!status) return true;
-            return r.envStatus4 === status;
+            return r.envStatus5 === status;
         }
 
         function showEnvRequestListModal(stlLabel, khwaengName, type, status) {
@@ -1514,9 +1555,9 @@
         function renderEnvModalHorizontalBar(canvasId, c, onSegmentClick) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
-            // ลำดับเดียวกับกราฟแท่งด้านนอก: คงเหลือ -> รอแขวง -> แขวงส่งกลับแล้ว (รอส่งสมบูรณ์) -> สมบูรณ์
-            const statusByDatasetIndex = ['remaining', 'waiting', 'returned', 'complete'];
-            const total = c.complete + c.returned + c.waiting + c.remaining;
+            // ลำดับเดียวกับกราฟแท่งด้านนอก: คงเหลือ -> รอจัดทำเล่มสมบูรณ์ -> รอแขวง -> แขวงส่งกลับแล้ว -> สมบูรณ์
+            const statusByDatasetIndex = ['remaining', 'pendingBook', 'waiting', 'returned', 'complete'];
+            const total = c.complete + c.returned + c.waiting + c.remaining + c.pendingBook;
             if (onSegmentClick) canvas.style.cursor = 'pointer';
             new Chart(canvas.getContext('2d'), {
                 type: 'bar',
@@ -1524,8 +1565,9 @@
                     labels: [''],
                     datasets: [
                         { label: 'คงเหลือ', data: [c.remaining], backgroundColor: CHART_COLORS.remaining, borderRadius: 4, borderSkipped: false },
+                        { label: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', data: [c.pendingBook], backgroundColor: CHART_COLORS.pendingBook, borderRadius: 4, borderSkipped: false },
                         { label: 'รอแขวง', data: [c.waiting], backgroundColor: CHART_COLORS.waiting, borderRadius: 4, borderSkipped: false },
-                        { label: 'แขวงส่งกลับแล้ว (รอส่งสมบูรณ์)', data: [c.returned], backgroundColor: CHART_COLORS.returned, borderRadius: 4, borderSkipped: false },
+                        { label: 'แขวงส่งกลับแล้ว', data: [c.returned], backgroundColor: CHART_COLORS.returned, borderRadius: 4, borderSkipped: false },
                         { label: 'สมบูรณ์', data: [c.complete], backgroundColor: CHART_COLORS.complete, borderRadius: 4, borderSkipped: false }
                     ]
                 },
@@ -1737,12 +1779,24 @@
                 else if (status === 'waiting') envStatus4 = 'waiting';
                 else envStatus4 = 'remaining';
 
+                // คอลัมน์ AA (index 26) = ประเภทเล่มรายงาน: "หลัก" / "ซ้ำ" / "สับเซต"
+                // แถวที่เป็น "ซ้ำ" หรือ "สับเซต" ใช้เล่มรายงานร่วมกับคำขอ "หลัก" (ไม่ต้องจัดทำเล่มใหม่)
+                const bookType = row[26] ? row[26].toString().trim() : "";
+                const isSharedBook = (bookType === 'ซ้ำ' || bookType === 'สับเซต');
+
+                // envStatus5: สถานะ 5 ค่า — แยก "รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)" ออกจาก "คงเหลือ" เดิม
+                // เงื่อนไข: เดิมต้องเป็น remaining อยู่แล้ว และคอลัมน์ AA ขึ้น "ซ้ำ"/"สับเซต" (ถ้าขึ้น "หลัก" ยังนับเป็น remaining เหมือนเดิม)
+                const envStatus5 = (envStatus4 === 'remaining' && isSharedBook) ? 'pendingBook' : envStatus4;
+
                 rows.push({
                     stl: stlName, khwaeng: khwaeng, req: reqNo, type: reqType, status: status,
-                    // ฟิลด์ดิบเพิ่มเติม (ไม่กระทบ status เดิม) ใช้แยกกลุ่ม "แขวงส่งกลับแล้ว (รอส่งสมบูรณ์)" ในกราฟหลัก
+                    // ฟิลด์ดิบเพิ่มเติม (ไม่กระทบ status เดิม) ใช้แยกกลุ่ม "แขวงส่งกลับแล้ว" ในกราฟหลัก
                     hasDraft: hasDraft, hasRecv: hasRecv, hasComplete: hasComplete,
                     // envStatus4: field ใหม่ (เสริม ไม่แทนที่ status เดิม) ใช้เป็นแหล่งคำนวณสถานะ env จุดเดียวทั้งระบบ
-                    envStatus4: envStatus4
+                    envStatus4: envStatus4,
+                    // bookType / envStatus5: เสริมสำหรับแยก "รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)" ในการ์ด 2 และกราฟความคืบหน้า
+                    bookType: bookType,
+                    envStatus5: envStatus5
                 });
             });
             return rows;
