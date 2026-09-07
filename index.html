@@ -1791,6 +1791,9 @@
                 const reqType = row[24] ? row[24].toString().trim() : ""; // Y = ประเภทรายงาน EAR/EC
                 if (!reqType) return; // ไม่ใช่คำขอที่ต้องทำรายงานสิ่งแวดล้อม
 
+                const apVal = row[41] ? row[41].toString().trim() : ""; // AP = Phase
+                if (apVal === "01.เร่งด่วน") return; // ไม่นับคำขอ "01.เร่งด่วน" ในรายงานสิ่งแวดล้อม (การ์ด 2 และกราฟความคืบหน้า)
+
                 const draftSent = row[29] ? row[29].toString().trim() : ""; // AD ส่งร่างให้แขวงแล้ว
                 const recvBack  = row[30] ? row[30].toString().trim() : ""; // AE แขวงส่งร่างกลับมาแล้ว
                 const complete  = row[31] ? row[31].toString().trim() : ""; // AF ส่งรายงานสมบูรณ์แล้ว
