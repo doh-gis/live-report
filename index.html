@@ -1,0 +1,2168 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบรายงานความก้าวหน้าการขออนุญาตใช้ประโยชน์พื้นที่ป่าไม้</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #e8f0fe;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(203,213,225,0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.4); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.7); }
+
+        /* ใช้ orientation แทน width-based breakpoint:
+           - แนวนอน (landscape) ไม่ว่าจะเป็นคอม โน้ตบุ๊ก แท็บเล็ต หรือไอแพด -> แสดงจบในหน้าเดียว ไม่ต้องเลื่อน
+           - แนวตั้ง (portrait) -> จัดเรียงเป็นคอลัมน์และอนุญาตให้เลื่อนลงได้
+           (สำคัญ: ใช้ !important ทับคลาส lg:h-screen / lg:overflow-hidden ของ Tailwind ที่ผูกกับ width ไม่ใช่ orientation) */
+        @media (orientation: landscape) {
+            /* พยายามแสดงจบในหน้าเดียว แต่ถ้าจอเตี้ย/เล็กเกินไปจนเนื้อหาไม่พอ ให้ปล่อย scroll แทนการตัดเนื้อหาทิ้ง
+               (เดิมใช้ overflow:hidden ตายตัว ทำให้กราฟโดนัทฝั่งขวาโดนตัดขอบจอบนหน้าจอเล็ก) */
+            body { overflow-y: auto !important; height: 100vh !important; width: 100vw; }
+            #panel-right-row { flex-direction: row !important; }
+            #panel-right-side { width: 30% !important; }
+        }
+        @media (orientation: portrait) {
+            body { overflow-y: auto !important; height: auto !important; min-height: 100vh; }
+            #main-content-row { grid-template-columns: 1fr; }
+            #panel-right-row { flex-direction: column !important; }
+            #panel-right-side { width: 100% !important; }
+            #panel-left {
+                order: 99;
+                width: 100% !important;
+                max-height: 420px;
+                margin-top: 0.25rem;
+            }
+            #panel-left .flex-1.overflow-y-auto {
+                max-height: 340px;
+            }
+            /* เพิ่มความสูงกราฟแท่ง 2 อัน (รายงานสิ่งแวดล้อม, Shapefile) เฉพาะตอนเปิดในมือถือ/แนวตั้ง
+               เพื่อให้อ่านค่าบนแท่งกราฟง่ายขึ้น โดยไม่กระทบเวอร์ชันคอม/แนวนอนที่โอเคอยู่แล้ว */
+            #envChartCard { min-height: 420px !important; }
+            #shpChartCard { min-height: 280px !important; }
+        }
+
+        /* ===== Fluid font-size: ไหลตามความกว้างจอจริง (vw) แทนการกระโดดเป็นขั้นแบบ breakpoint ===== */
+        /* ใช้กับตัวเลขหลักการ์ดที่ 1 (คำขอทั้งหมด) */
+        .stat-num-xl { font-size: clamp(1.5rem, 0.95rem + 2.2vw, 3.1rem); line-height: 1; }
+        /* ใช้กับตัวเลขการ์ดที่ 2 (Shapefile เสร็จ/คงเหลือ) */
+        .stat-num-lg { font-size: clamp(1rem, 0.72rem + 1.1vw, 1.6rem); line-height: 1; }
+        /* ใช้กับตัวเลข 3 คอลัมน์ของการ์ดที่ 3-4 (แผนที่/สิ่งแวดล้อม) ที่มักล้น/ถูกตัดบนโน้ตบุ๊ก-แท็บเล็ต */
+        .stat-num-md { font-size: clamp(0.8rem, 0.62rem + 0.75vw, 1.25rem); line-height: 1; }
+        /* ป้ายชื่อหัวการ์ด */
+        .stat-label  { font-size: clamp(0.6rem, 0.5rem + 0.4vw, 0.95rem); }
+        /* ตัวเลขย่อย EAR/EC */
+        .stat-num-xs { font-size: clamp(0.55rem, 0.45rem + 0.25vw, 0.75rem); }
+
+        /* ===== ลูกศรเทียบรอบก่อนหน้า (▲/▼) ===== */
+        .trend-badge { font-size: 0.62rem; font-weight: 800; display: inline-flex; align-items: center; gap: 1px; padding: 0 3px; border-radius: 4px; vertical-align: middle; line-height: 1.5; white-space: nowrap; }
+        .trend-up   { color: #059669; background: rgba(16,185,129,0.12); }
+        .trend-down { color: #e11d48; background: rgba(225,29,72,0.12); }
+        .trend-flat { color: #94a3b8; background: rgba(148,163,184,0.12); }
+
+        /* ===== Toast แจ้งเตือน ===== */
+        #toast-wrap { position: fixed; top: 1rem; right: 1rem; z-index: 100; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+        .toast-item { pointer-events: auto; min-width: 210px; max-width: 300px; background: #fff; border-radius: 0.75rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); padding: 0.6rem 0.9rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 800; color: #1e293b; animation: toast-in 0.25s ease-out; }
+        .toast-item.toast-leaving { animation: toast-out 0.25s ease-in forwards; }
+        @keyframes toast-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes toast-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(20px); } }
+
+        /* ===== โหมดนำเสนอ (TV/Presentation Mode) ===== */
+        body.presentation-mode #panel-left,
+        body.presentation-mode .no-presentation { display: none !important; }
+        body.presentation-mode { background: #0f172a; }
+        body.presentation-mode #main-content-row { grid-template-columns: 1fr !important; }
+
+        /* ปุ่มออกจากโหมดนำเสนอ วางในหัวข้อข้างปุ่มรีเฟรช แสดงเฉพาะตอนอยู่ในโหมดนำเสนอ */
+        #exit-presentation-btn { display: none; }
+        body.presentation-mode #exit-presentation-btn { display: flex; }
+
+        /* ===== Micro-interaction: การ์ดสรุปยกตัวขึ้นเบาๆ ตอน hover ===== */
+        .stat-card-hover { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+        .stat-card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -8px rgba(15, 23, 42, 0.18); }
+
+        /* ===== Skeleton loading: แทนที่ "-" ตอนโหลดข้อมูลครั้งแรก ===== */
+        .skeleton-number { color: transparent !important; border-radius: 4px; background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 37%, #e2e8f0 63%); background-size: 400% 100%; animation: skeleton-shimmer 1.4s ease infinite; display: inline-block; }
+        .stat-num-xl.skeleton-number { min-width: 4.5rem; }
+        .stat-num-lg.skeleton-number, .stat-num-md.skeleton-number { min-width: 2.4rem; }
+        .stat-num-xs.skeleton-number { min-width: 1.8rem; }
+        @keyframes skeleton-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+        /* ===== Dark mode: override เฉพาะ class Tailwind ที่ใช้บ่อยในหน้านี้ (ไม่ใช้ tailwind dark: variant) ===== */
+        body.dark-mode { background-color: #0f172a; }
+        body.dark-mode .bg-white { background-color: #1e293b !important; }
+        body.dark-mode .bg-slate-50 { background-color: #1e293b !important; }
+        body.dark-mode .bg-slate-100 { background-color: #334155 !important; }
+        body.dark-mode .bg-slate-800 { background-color: #0b1220 !important; }
+        body.dark-mode .border-slate-200, body.dark-mode .border-slate-100 { border-color: #334155 !important; }
+        body.dark-mode .text-slate-800, body.dark-mode .text-slate-700 { color: #e2e8f0 !important; }
+        body.dark-mode .text-slate-600 { color: #cbd5e1 !important; }
+        body.dark-mode .text-slate-500, body.dark-mode .text-slate-400 { color: #94a3b8 !important; }
+        body.dark-mode .shadow-md, body.dark-mode .shadow-lg { box-shadow: 0 4px 16px -4px rgba(0,0,0,0.5) !important; }
+        body.dark-mode .custom-scrollbar::-webkit-scrollbar-track { background: rgba(51,65,85,0.5); }
+
+        /* ===== Visual theme: cute, minimal, cartoon-like (presentation only) ===== */
+        :root {
+            --candy-ink: #334155;
+            --candy-line: #dce8f5;
+            --candy-shadow: 0 10px 24px rgba(100, 116, 139, 0.10);
+        }
+        body:not(.dark-mode) {
+            background:
+                radial-gradient(circle at 8% 7%, rgba(186, 230, 253, .78) 0 7rem, transparent 7.1rem),
+                radial-gradient(circle at 94% 93%, rgba(254, 215, 170, .55) 0 9rem, transparent 9.1rem),
+                linear-gradient(135deg, #f7fbff 0%, #eef7ff 50%, #fff8f0 100%);
+        }
+        body:not(.dark-mode)::before,
+        body:not(.dark-mode)::after {
+            content: "";
+            position: fixed;
+            z-index: -1;
+            border-radius: 999px;
+            pointer-events: none;
+            opacity: .55;
+        }
+        body:not(.dark-mode)::before { width: 1rem; height: 1rem; background: #fda4af; top: 22%; left: 2%; box-shadow: 1.4rem 2.2rem 0 #c4b5fd, 4rem -.9rem 0 #fde68a; }
+        body:not(.dark-mode)::after { width: .75rem; height: .75rem; background: #86efac; right: 4%; top: 30%; box-shadow: -2rem 2.8rem 0 #93c5fd, -3.7rem -.8rem 0 #f9a8d4; }
+
+        /* Main surfaces */
+        body:not(.dark-mode) .bg-white {
+            border-color: var(--candy-line) !important;
+            box-shadow: var(--candy-shadow) !important;
+        }
+        body:not(.dark-mode) .bg-slate-50 { background-color: #f8fbff !important; }
+        body:not(.dark-mode) .bg-slate-100 { background-color: #edf5ff !important; }
+        body:not(.dark-mode) .border-slate-200,
+        body:not(.dark-mode) .border-slate-100 { border-color: var(--candy-line) !important; }
+        body:not(.dark-mode) .rounded-xl { border-radius: 1.15rem !important; }
+        body:not(.dark-mode) .rounded-lg { border-radius: .85rem !important; }
+
+        /* Header and status controls */
+        body > .bg-white:first-of-type {
+            background: rgba(255,255,255,.88) !important;
+            backdrop-filter: blur(12px);
+            border-top: 3px solid #bae6fd !important;
+        }
+        h1 > span:first-child { box-shadow: 0 0 0 5px rgba(56, 189, 248, .14); }
+        button {
+            border-radius: .8rem !important;
+            transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease !important;
+        }
+        button:hover { transform: translateY(-1px); box-shadow: 0 5px 12px rgba(100, 116, 139, .12); }
+        button:active { transform: translateY(0) scale(.97) !important; }
+
+        /* Summary cards read as soft colour blocks, while their existing status colours remain intact */
+        .stat-card-hover { position: relative; overflow: hidden; }
+        .stat-card-hover::after {
+            content: ""; position: absolute; width: 5.5rem; height: 5.5rem; border-radius: 999px;
+            right: -2.2rem; bottom: -2.7rem; background: currentColor; opacity: .045; pointer-events: none;
+        }
+        body:not(.dark-mode) .stat-card-hover:hover { box-shadow: 0 16px 28px rgba(100, 116, 139, .16) !important; }
+        body:not(.dark-mode) .stat-card-hover .bg-sky-50,
+        body:not(.dark-mode) .stat-card-hover .bg-emerald-50 { border-radius: .75rem; }
+        .trend-badge { border-radius: 999px; padding: 1px 6px; }
+
+        /* Panels, chart headings, and the daily-progress list */
+        #panel-left, #envChartCard, #shpChartCard, #panel-right-side > div {
+            border-top: 3px solid rgba(186, 230, 253, .9) !important;
+        }
+        #panel-left .cursor-pointer {
+            border-radius: 1rem !important;
+            box-shadow: 0 3px 9px rgba(100, 116, 139, .05);
+            transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+        }
+        #panel-left .cursor-pointer:hover { transform: translateX(3px); box-shadow: 0 8px 16px rgba(100, 116, 139, .11); }
+        #envChartCard h3 > span:first-child, #shpChartCard h4 > span:first-child { border-radius: 999px; width: .55rem; }
+
+        /* Softer feedback elements */
+        .toast-item { border: 1px solid #dbeafe; border-radius: 1rem; box-shadow: var(--candy-shadow); }
+        #detailsModal > div { border-radius: 1.4rem !important; border-color: #dbeafe !important; }
+        #detailsModal > div > div:first-child { background: linear-gradient(90deg, #f0f9ff, #faf5ff) !important; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #a5c8e8; border-radius: 999px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #7fb3dc; }
+
+        @media (max-width: 640px) {
+            body:not(.dark-mode)::before, body:not(.dark-mode)::after { display: none; }
+            body { padding: .7rem !important; }
+        }
+
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen w-full p-3 md:p-4 lg:p-5 flex flex-col lg:h-screen lg:overflow-hidden box-border text-sm font-semibold">
+
+    <!-- ===== TOAST ===== -->
+    <div id="toast-wrap" class="no-presentation"></div>
+
+    <!-- ===== HEADER ===== -->
+    <div class="bg-white border border-slate-200 rounded-xl px-4 md:px-6 py-[0.6rem] md:py-[0.8rem] flex flex-wrap justify-between items-center gap-2 shadow-md shrink-0 mb-[0.6rem]">
+        <div class="min-w-0 flex items-center gap-3 flex-wrap">
+            <h1 class="font-black text-slate-800 tracking-wide flex items-center gap-2" style="font-size: clamp(0.85rem, 0.68rem + 0.8vw, 1.5rem);">
+                <span class="h-3 w-3 rounded-full bg-sky-500 animate-pulse shrink-0"></span>
+                ระบบรายงานความก้าวหน้าการขออนุญาตใช้ประโยชน์พื้นที่ป่าไม้
+            </h1>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 md:px-5 py-1.5 md:py-2 flex flex-nowrap items-center justify-center gap-x-1.5 sm:gap-x-3 md:gap-x-5 text-sm md:text-base w-full sm:w-auto shrink-0">
+            <span id="connection-badge" class="text-emerald-600 font-extrabold flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-sm md:text-base shrink-0">
+                <span id="connection-dot" class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span> <span id="connection-text">Connected</span>
+            </span>
+            <span id="last-updated" class="text-slate-600 font-bold text-[10px] sm:text-sm truncate min-w-0" title="">กำลังโหลดข้อมูล...</span>
+            <button id="refresh-btn" type="button" onclick="manualRefresh()"
+                class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
+                aria-label="รีเฟรชข้อมูล">
+                <svg id="refresh-icon" class="h-4 w-4 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span class="hidden sm:inline">รีเฟรช</span>
+            </button>
+            <button id="exit-presentation-btn" type="button" onclick="togglePresentationMode()"
+                class="items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 font-bold text-xs md:text-sm hover:bg-rose-100 active:scale-95 transition-all shrink-0"
+                aria-label="ออกจากโหมดนำเสนอ" title="ออกจากโหมดนำเสนอ (Esc)">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span>ออกจากโหมดนำเสนอ</span>
+            </button>
+            <button id="presentation-btn" type="button" onclick="togglePresentationMode()"
+                class="no-presentation flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
+                aria-label="โหมดนำเสนอ" title="โหมดนำเสนอ (จอใหญ่/TV)">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span class="hidden md:inline">โหมดนำเสนอ</span>
+            </button>
+            <button id="darkmode-btn" type="button" onclick="toggleDarkMode()"
+                class="no-presentation flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-xs md:text-sm hover:bg-slate-50 active:scale-95 transition-all shrink-0"
+                aria-label="สลับโหมดมืด/สว่าง" title="สลับโหมดมืด/สว่าง">
+                <svg id="darkmode-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"/></svg>
+                <span id="darkmode-label" class="hidden md:inline">โหมดมืด</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== STAT CARDS ===== -->
+    <div class="grid grid-cols-1 lg:grid-cols-[2fr_4fr_2fr_2fr] gap-2 md:gap-3 lg:gap-4 shrink-0 mb-[0.4rem] md:mb-[0.6rem] lg:mb-[0.8rem]">
+        <div class="bg-white border-t-4 border-t-sky-500 border-x border-b border-slate-200 rounded-xl p-[0.6rem] md:p-[0.8rem] flex flex-col justify-between min-h-[5.6rem] md:min-h-[6.4rem] lg:min-h-[7.2rem] shadow-lg shadow-slate-200/60 stat-card-hover">
+            <div class="flex justify-between items-center w-full">
+                <span class="stat-label font-black text-sky-600 uppercase tracking-wider block truncate">1. คำขอทั้งหมดในระบบ</span>
+                <div class="p-1.5 bg-sky-50 rounded-lg text-sky-500 shrink-0">
+                    <svg class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586A1 1 0 0112 3.414L15.586 7a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+            </div>
+            <div class="flex items-baseline justify-start gap-1.5 mt-auto">
+                <span id="total-requests" class="stat-num-xl font-black text-slate-800 tracking-tight skeleton-number">-</span>
+                <span class="stat-label font-black text-slate-500">รายการ</span>
+                <span id="total-requests-trend"></span>
+            </div>
+        </div>
+
+        <div class="col-span-2 lg:col-span-1 bg-white border-t-4 border-t-indigo-500 border-x border-b border-slate-200 rounded-xl p-[0.6rem] md:p-[0.8rem] flex flex-col justify-between min-h-[5.6rem] md:min-h-[6.4rem] lg:min-h-[7.2rem] shadow-lg shadow-slate-200/60 stat-card-hover">
+            <div class="flex justify-between items-center">
+                <span class="stat-label font-black text-indigo-600 uppercase tracking-wider block truncate">2. รายงานสิ่งแวดล้อม</span>
+                <span id="env-percent" class="stat-num-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shadow-sm whitespace-nowrap skeleton-number">-%</span>
+            </div>
+            <div class="mt-auto border-t border-slate-200 pt-1.5">
+                <!-- 6 ช่อง (ต้องทำ / สมบูรณ์ / ส่งกลับแล้ว / รอแขวง / คงเหลือ / รอทำเล่ม) จัดกึ่งกลาง
+                     บนจอกว้างพอจะอยู่บรรทัดเดียว ถ้าจอแคบ (มือถือ) จะห่อ (wrap) ขึ้นบรรทัดใหม่แทนการซ่อน/เลื่อนแนวนอน
+                     เพื่อให้เห็นครบทั้ง 6 ค่าเสมอโดยไม่ต้องปัดจอ (ระยะห่างบีบแน่นขึ้นเพื่อรองรับ 6 ช่อง) -->
+                <div class="flex items-start justify-center flex-wrap gap-x-2 gap-y-1.5 sm:gap-x-2.5 md:gap-x-3.5 lg:gap-x-4 text-center px-0.5">
+                    <div class="shrink-0">
+                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">ต้องทำ</span>
+                        <span id="env-total" class="stat-num-md font-black text-slate-800 skeleton-number">-</span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-slate-400 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-total-ear" class="text-slate-600 font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-total-ec" class="text-slate-600 font-black">-</span></span>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">สมบูรณ์</span>
+                        <span id="env-completed" class="stat-num-md font-black text-[#40C79A] skeleton-number">-</span>
+                        <span id="env-completed-trend"></span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#40C79A]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-completed-ear" class="text-[#40C79A] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-completed-ec" class="text-[#40C79A] font-black">-</span></span>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap" title="แขวงส่งกลับแล้ว">ส่งกลับแล้ว</span>
+                        <span id="env-returned" class="stat-num-md font-black text-[#98CF59] skeleton-number">-</span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#98CF59]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-returned-ear" class="text-[#98CF59] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-returned-ec" class="text-[#98CF59] font-black">-</span></span>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">รอแขวง</span>
+                        <span id="env-waiting" class="stat-num-md font-black text-[#FDE68A] skeleton-number">-</span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#FDE68A]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-waiting-ear" class="text-[#FDE68A] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-waiting-ec" class="text-[#FDE68A] font-black">-</span></span>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap" title="รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)">รอทำเล่ม</span>
+                        <span id="env-pendingbook" class="stat-num-md font-black text-[#FFB066] skeleton-number" title="ขาดข้อมูลจากแขวง">-</span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#FFB066]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-pendingbook-ear" class="text-[#FFB066] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-pendingbook-ec" class="text-[#FFB066] font-black">-</span></span>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <span class="stat-label font-black text-slate-400 block mb-0.5 whitespace-nowrap">คงเหลือ</span>
+                        <span id="env-remaining" class="stat-num-md font-black text-[#E74A6D] skeleton-number">-</span>
+                        <span id="env-remaining-trend"></span>
+                        <div class="flex flex-col sm:flex-row justify-center gap-0 sm:gap-1.5 md:gap-2 mt-0.5 stat-num-xs font-bold text-[#E74A6D]/70 leading-tight">
+                            <span class="whitespace-nowrap">EAR: <span id="env-remaining-ear" class="text-[#E74A6D] font-black">-</span></span>
+                            <span class="whitespace-nowrap">EC: <span id="env-remaining-ec" class="text-[#E74A6D] font-black">-</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- การ์ด 3 และ 4 จับคู่กันเป็น grid 2 คอลัมน์เสมอ (แม้บนจอเล็ก) เพื่อให้สูงเท่ากันแบบ stretch อัตโนมัติ
+             ส่วนบนจอเดสก์ท็อป (lg) ครอบนี้จะกลายเป็น display:contents (หายไปจาก layout) ทำให้การ์ด 3-4
+             กลับไปเป็นลูกโดยตรงของกริดหลัก 4 คอลัมน์เหมือนเดิมทุกประการ -->
+        <div class="grid grid-cols-2 gap-2 md:gap-3 lg:contents">
+        <div class="bg-white border-t-4 border-t-emerald-500 border-x border-b border-slate-200 rounded-xl p-[0.6rem] md:p-[0.8rem] flex flex-col justify-between min-h-[5.6rem] md:min-h-[6.4rem] lg:min-h-[7.2rem] shadow-lg shadow-slate-200/60 stat-card-hover">
+            <div class="flex justify-between items-center">
+                <span class="stat-label font-black text-emerald-600 uppercase tracking-wider block truncate">3. Shapefile</span>
+                <span id="shp-percent" class="stat-num-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shadow-sm whitespace-nowrap skeleton-number">-%</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-auto border-t border-slate-200 pt-1.5 text-center">
+                <div class="truncate">
+                    <span class="stat-label font-black uppercase tracking-wider text-slate-400 block mb-0.5">ต้องทำ</span>
+                    <span id="shp-total" class="stat-num-md font-black text-slate-800 skeleton-number">-</span>
+                </div>
+                <div class="border-l border-slate-200 truncate">
+                    <span class="stat-label font-black uppercase tracking-wider text-slate-400 block mb-0.5">เสร็จสะสม</span>
+                    <span id="shp-completed" class="stat-num-md font-black text-emerald-600 skeleton-number">-</span>
+                    <span id="shp-completed-trend"></span>
+                </div>
+                <div class="border-l border-slate-200 truncate">
+                    <span class="stat-label font-black uppercase tracking-wider text-slate-400 block mb-0.5">คงเหลือ</span>
+                    <span id="shp-remaining" class="stat-num-md font-black text-rose-500 skeleton-number">-</span>
+                    <span id="shp-remaining-trend"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border-t-4 border-t-amber-500 border-x border-b border-slate-200 rounded-xl p-[0.6rem] md:p-[0.8rem] flex flex-col justify-between min-h-[5.6rem] md:min-h-[6.4rem] lg:min-h-[7.2rem] shadow-lg shadow-slate-200/60 stat-card-hover">
+            <div class="flex justify-between items-center">
+                <span class="stat-label font-black text-amber-600 uppercase tracking-wider block truncate">4. แผนที่คำขอ</span>
+                <span id="map-percent" class="stat-num-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shadow-sm whitespace-nowrap skeleton-number">-%</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1 mt-auto border-t border-slate-200 pt-1.5 text-center">
+                <div class="truncate">
+                    <span class="stat-label font-black text-slate-400 block mb-0.5">ต้องทำ</span>
+                    <span id="map-total" class="stat-num-md font-black text-slate-800 skeleton-number">-</span>
+                </div>
+                <div class="border-l border-slate-200 pl-1 truncate">
+                    <span class="stat-label font-black text-slate-400 block mb-0.5">เสร็จสะสม</span>
+                    <span id="map-completed" class="stat-num-md font-black text-emerald-600 skeleton-number">-</span>
+                    <span id="map-completed-trend"></span>
+                </div>
+                <div class="border-l border-slate-200 pl-1 truncate">
+                    <span class="stat-label font-black text-slate-400 block mb-0.5">คงเหลือ</span>
+                    <span id="map-remaining" class="stat-num-md font-black text-rose-500 skeleton-number">-</span>
+                    <span id="map-remaining-trend"></span>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- ===== MAIN CONTENT: LEFT PANEL (2) + RIGHT CONTENT (1) ===== -->
+    <div id="main-content-row" class="flex-1 grid grid-cols-1 lg:grid-cols-[2fr_8fr] gap-3 md:gap-4 lg:gap-5 min-h-0">
+
+        <!-- ===== PANEL LEFT (กรอบ 2) - ความคืบหน้า จากไฟล์ 2.html ===== -->
+        <div id="panel-left" class="bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0 shrink-0">
+            <h3 class="text-sm font-black text-sky-600 mb-2 flex flex-col gap-1 shrink-0 border-b border-slate-200 pb-2">
+                <span class="flex items-center gap-1.5 text-base">
+                    <span class="h-3 w-3 bg-sky-500 rounded-full"></span> ความคืบหน้า
+                </span>
+                <span id="custom-title-date" class="text-slate-700 pl-2 font-black block truncate text-sm">...</span>
+            </h3>
+            
+            <div class="flex-1 overflow-y-auto custom-scrollbar space-y-3.5 pr-0.5 text-xs font-bold">
+                <!-- สิ่งแวดล้อม block -->
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex flex-col min-h-0 cursor-pointer hover:bg-indigo-50/60 hover:border-indigo-200 transition-colors" onclick="showDailyRequestModal('env')">
+                    <div id="env-box-header" class="flex flex-row justify-between items-center text-indigo-600 font-black text-sm w-full border-b border-slate-200 pb-1.5">
+                        <span>🍃 รายงานสิ่งแวดล้อม</span>
+                        <span id="date-env-total-sub" class="text-xs text-slate-400 font-bold shrink-0">0 คำขอ</span>
+                    </div>
+                    <div class="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pr-0.5 mt-2">
+                        <div id="draft-box" class="flex flex-col">
+                            <span class="text-slate-500 font-black">• ร่างส่งเขต</span>
+                            <div id="date-env-draft-list" class="pl-2 space-y-1 text-slate-700 font-semibold hidden mt-1 border-l-2 border-indigo-100"></div>
+                        </div>
+                        <div id="recv-box" class="flex flex-col">
+                            <span class="text-slate-500 font-black">• รับจากแขวง</span>
+                            <div id="date-env-recv-list" class="pl-2 space-y-1 text-slate-700 font-semibold hidden mt-1 border-l-2 border-indigo-100"></div>
+                        </div>
+                        <div id="comp-box" class="flex flex-col">
+                            <span class="text-slate-500 font-black">• สมบูรณ์</span>
+                            <div id="date-env-comp-list" class="pl-2 space-y-1 text-slate-700 font-semibold hidden mt-1 border-l-2 border-indigo-100"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shapefile block -->
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 cursor-pointer hover:bg-emerald-50/60 hover:border-emerald-200 transition-colors" onclick="showDailyRequestModal('shapefile')">
+                    <div id="shp-box-header" class="flex flex-row justify-between items-center text-emerald-600 font-black text-sm w-full">
+                        <span>📦 Shapefile</span>
+                        <span id="date-shp-total-sub" class="text-xs text-slate-400 font-bold shrink-0">0 คำขอ</span>
+                    </div>
+                    <div id="date-shp-list" class="space-y-1.5 text-slate-700 max-h-24 overflow-y-auto custom-scrollbar mt-1.5"></div>
+                </div>
+
+                <!-- แผนที่/แผนผัง block -->
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 cursor-pointer hover:bg-amber-50/60 hover:border-amber-200 transition-colors" onclick="showDailyRequestModal('map')">
+                    <div id="map-box-header" class="flex flex-row justify-between items-center text-amber-600 font-black text-sm w-full">
+                        <span>🗺️ แผนที่/แผนผัง</span>
+                        <span id="date-map-total-sub" class="text-xs text-slate-400 font-bold shrink-0">0 คำขอ</span>
+                    </div>
+                    <div id="date-map-list" class="space-y-1.5 text-slate-700 max-h-24 overflow-y-auto custom-scrollbar mt-1.5"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PANEL RIGHT (กรอบ 1) - Charts จากไฟล์ 1.html ===== -->
+        <div id="panel-right-row" class="flex-1 flex flex-col lg:flex-row gap-3 md:gap-4 lg:gap-5 min-h-0 min-w-0">
+
+            <!-- Main: รายงานสิ่งแวดล้อม (Stacked Bar Chart) - จุดสนใจหลักของผู้บริหาร -->
+            <div id="envChartCard" class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0 min-w-0" style="min-height: 260px;">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-2 shrink-0">
+                    <h3 class="text-sm md:text-base font-black text-slate-800 flex items-center gap-1.5">
+                        <span class="h-3 w-3 bg-indigo-500 rounded-full"></span> ความคืบหน้ารายงานสิ่งแวดล้อม <span class="text-[10px] md:text-xs font-bold text-slate-400">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
+                    </h3>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button id="envSortBtn" type="button" onclick="toggleEnvSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
+                            class="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-black border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9M3 12h9m-9 4h5m6-9v14m0 0l-3-3m3 3l3-3"/></svg>
+                            <span class="hidden md:inline">คงเหลือมาก→น้อย</span>
+                        </button>
+                        <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                            <button id="envModeCountBtn" type="button" onclick="setEnvChartMode('count')" class="px-2.5 py-1 rounded-md text-xs font-black transition-colors bg-white text-indigo-600 shadow-sm">จำนวนงาน</button>
+                            <button id="envModePercentBtn" type="button" onclick="setEnvChartMode('percent')" class="px-2.5 py-1 rounded-md text-xs font-black transition-colors text-slate-500">% ความสำเร็จ</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 min-h-0 w-full relative">
+                    <canvas id="envBarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Side column (30%): Shapefile (บน, ย่อส่วน) + Request Map (ล่าง) -->
+            <div id="panel-right-side" class="w-full lg:w-[30%] flex flex-col gap-3 md:gap-4 min-h-0 shrink-0">
+                <div class="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 md:p-3 flex flex-col shadow-md min-h-0" style="min-height: 145px;" id="shpChartCard">
+                    <h4 class="font-black text-slate-800 text-sm md:text-base border-b border-slate-200 pb-1.5 flex items-center gap-1.5 shrink-0">
+                        <span class="h-3 w-3 bg-emerald-500 rounded-full"></span> ความคืบหน้างาน Shapefile
+                        <button id="shpSortBtn" type="button" onclick="toggleShpSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
+                            class="ml-auto shrink-0 h-5 w-5 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors">
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9M3 12h9m-9 4h5m6-9v14m0 0l-3-3m3 3l3-3"/></svg>
+                        </button>
+                        <span class="text-[10px] md:text-xs font-bold text-slate-400 truncate">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
+                    </h4>
+                    <div class="flex-1 relative w-full min-h-0 mt-1">
+                        <canvas id="shpChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="flex-1 bg-white border border-slate-200 rounded-xl p-3 md:p-4 flex flex-col shadow-md min-h-0" style="min-height: 145px;">
+                    <h4 class="font-black text-slate-800 text-sm md:text-base border-b border-slate-200 pb-2 flex items-center gap-1.5 shrink-0">
+                        <span class="h-3 w-3 bg-amber-400 rounded-full"></span> ความคืบหน้างานแผนที่คำขอ <span class="text-[10px] md:text-xs font-bold text-slate-400 ml-auto">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
+                    </h4>
+                    <div class="flex-1 relative w-full h-full min-h-0 mt-1">
+                        <canvas id="mapPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== MODAL ===== -->
+    <div id="detailsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 transition-all">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 id="modalTitle" class="text-sm md:text-md lg:text-lg font-black text-slate-800 flex items-center flex-wrap gap-1">
+                    <span class="h-3 w-1 bg-sky-500 rounded-full shrink-0"></span> รายละเอียดข้อมูลรายแขวง
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors shrink-0">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="modalContainer" class="p-4 md:p-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/50 space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // ===== WEB APP URL =====
+        // ⚠️ คำเตือนด้านความปลอดภัย (อ่านก่อนแก้ไข/เผยแพร่ไฟล์นี้):
+        // ไฟล์นี้เป็น client-side ทั้งหมด (รันในเบราว์เซอร์ของผู้ใช้) ดังนั้นค่าตัวแปรใดๆ ที่ฝังไว้ในนี้
+        // (WEB_APP_URL, ACCESS_TOKEN ด้านล่าง ฯลฯ) ถือว่า "เปิดเผยต่อสาธารณะ" — ใครก็ตามที่เปิด
+        // "View Page Source" หรือมีลิงก์ไฟล์นี้ สามารถคัดลอกไปเรียกดูข้อมูลได้โดยตรง โดยไม่ต้องผ่านหน้าเว็บนี้เลย
+        // กรุณาตรวจสอบการตั้งค่า deploy ของ Apps Script (Deploy → Manage deployments → Who has access)
+        // ว่าจำกัดสิทธิ์ตามที่ต้องการจริงหรือไม่ ดูรายละเอียดเพิ่มเติมใน SECURITY_NOTES.md
+        //
+        // TODO: ผู้ดูแลระบบต้องตั้งค่า token นี้ให้ตรงกับที่ตรวจสอบฝั่ง Apps Script (Script Properties)
+        // เพื่อป้องกันไม่ให้ URL นี้ถูกเรียกใช้จากภายนอกโดยไม่ผ่านหน้าเว็บนี้
+        // (หมายเหตุ: วิธีนี้ไม่ใช่การรักษาความปลอดภัยที่แท้จริง เพราะ token ก็ยังฝังอยู่ใน client-side source
+        //  เหมือนกัน คนที่ตั้งใจจะดึงข้อมูลจริงๆ ก็ยังคัดลอก token ไปใช้ได้ วิธีนี้แค่ป้องกันการเข้าถึงแบบสุ่ม/บังเอิญเท่านั้น)
+        const ACCESS_TOKEN = "ใส่ token ที่นี่";
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzuEJ-eaApTTXpl8VSIN3FsQkKViRQjKyyACQ-bDZN6JN0meVDFth4Vjxlq2OzJ-5C8Bw/exec";
+
+        let shpChartInstance = null;
+        let mapPieChartInstance = null;
+        let envBarChartInstance = null;
+        let currentSheetData = []; // เก็บ sheetData ล่าสุดไว้ใช้กับโมดัลรายละเอียดคำขอรายวัน
+        let currentReportDate = null; // เก็บวันที่ที่แสดงในกรอบ "ความคืบหน้า" (จาก column AC) ไว้ใช้ filter
+
+        // ===== State ของกราฟแท่ง "รายงานสิ่งแวดล้อม" (รายสทล.) =====
+        // เก็บข้อมูลดิบ (จำนวนจริง) ต่อ สทล. ไว้ใช้สลับโหมด จำนวนงาน / % ความสำเร็จ โดยไม่ยิง API ซ้ำ
+        let envBarLabels = [];
+        let envBarCompletedRaw = [];
+        let envBarReturnedRaw = []; // แขวงส่งกลับแล้ว = AE มีวันที่ แต่ AF ยังไม่ส่ง
+        let envBarWaitingRaw = [];
+        let envBarRemainingRaw = [];
+        let envBarPendingBookRaw = []; // รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง) = แยกจาก "คงเหลือ" เดิม ตามคอลัมน์ AA (ซ้ำ/สับเซต)
+        let envChartMode = 'count'; // 'count' = จำนวนงาน, 'percent' = % ความสำเร็จ (100% stacked)
+
+        // ===== สีของกราฟทั้งหมด (single source of truth) =====
+        // ลดความสดของสีเดิมลงเหลือ ~80% (ผสมกับสีขาว 20%) เพื่อให้ดูนุ่มนวลขึ้น ใช้ค่าเดียวกันนี้
+        // ทั้งในกราฟแท่ง/โดนัททุกตัว, legend swatch ในโมดัล, และ accent class ที่คลิกจากกราฟ
+        const CHART_COLORS = {
+            complete:  '#40C79A', // เขียว (เดิม, คงไว้)                — สมบูรณ์ (รายงานสิ่งแวดล้อม)
+            returned:  '#98CF59', // เขียวอ่อน/เหลืองอมเขียว (สีใหม่)   — แขวงส่งกลับแล้ว
+            waiting:   '#FDE68A', // เหลือง (เดิม, คงไว้)               — รอแขวง
+            remaining: '#E74A6D', // แดง (เดิม, คงไว้)                  — คงเหลือ (รายงานสิ่งแวดล้อม)
+            pendingBook: '#FFB066', // ส้ม (เดิม, คงไว้)                — รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)
+            shpComplete:        '#40C79A',              // เดิม — Shapefile เสร็จสมบูรณ์แล้ว (ลายทแยง)
+            shpCompletePartial: 'rgba(16, 185, 129, 0.52)', // เดิม — Shapefile เสร็จบางส่วน
+            shpRemaining:       '#F6657E',              // เดิม — Shapefile คงเหลือ
+            mapComplete:        '#40C79A',              // เขียว (เท่ากับ shpComplete) — แผนที่คำขอ เสร็จสะสม
+            mapRemaining:       '#F6657E'               // เดิม — แผนที่คำขอ คงเหลือ
+        };
+
+        // ===== เพิ่มเติม: state สำหรับ count-up / ลูกศรเทียบรอบก่อนหน้า / เวลาสัมพัทธ์ / toast / export =====
+        const TREND_STORAGE_KEY = 'forestDashboardPrevStats_v1';
+        let isFirstLoad = true;
+        let prevStats = (() => { try { const raw = localStorage.getItem(TREND_STORAGE_KEY); return raw ? JSON.parse(raw) : {}; } catch (e) { return {}; } })();
+        let newStats = {};
+        let lastSyncDate = null;
+
+        // ===== state สำหรับกราฟ Shapefile / แผนที่ (render function แยกต่างหาก รองรับ sort + tooltip) =====
+        let shpLabels = [], shpCompletedArr = [], shpRemainingArr = [], shpCompletedColorsArr = [];
+        let shpSortDesc = false;
+        let mapCompVal = 0, mapRemVal = 0;
+        let envSortDesc = false;
+
+        // ===== สีตัวอักษร/เส้นกริดของกราฟ ปรับตามโหมดมืด/สว่างแบบสด =====
+        function chartTextColor() { return document.body.classList.contains('dark-mode') ? '#e2e8f0' : '#1e293b'; }
+        function chartTickColor() { return document.body.classList.contains('dark-mode') ? '#cbd5e1' : '#334155'; }
+        function chartGridColor() { return document.body.classList.contains('dark-mode') ? 'rgba(148,163,184,0.10)' : 'rgba(100, 116, 139, 0.08)'; }
+
+        // ===== วาด "ป้ายลอยทรงแคปซูล" เหนือแท่งกราฟ (สไตล์เดียวกับตัวเลข % ที่ลอยเหนือแท่งในดีไซน์อ้างอิง) =====
+        function drawFloatingBadge(ctx, centerX, topY, text, opts) {
+            opts = opts || {};
+            const fontSize = opts.fontSize || (isSmallScreen ? 10 : 11);
+            const paddingX = opts.paddingX || 7;
+            const paddingY = opts.paddingY || 3.5;
+            const gap = opts.gap != null ? opts.gap : 6; // ระยะห่างระหว่างป้ายกับยอดแท่ง
+            const isDark = document.body.classList.contains('dark-mode');
+            const bgColor = opts.bgColor || (isDark ? '#1e293b' : '#ffffff');
+            const textColor = opts.textColor || (isDark ? '#e2e8f0' : '#1e293b');
+
+            ctx.save();
+            ctx.font = `800 ${fontSize}px Sarabun, sans-serif`;
+            const textWidth = ctx.measureText(text).width;
+            const boxWidth = textWidth + paddingX * 2;
+            const boxHeight = fontSize + paddingY * 2;
+            const boxX = centerX - boxWidth / 2;
+            const boxY = topY - gap - boxHeight;
+            const radius = boxHeight / 2;
+
+            ctx.shadowColor = isDark ? 'rgba(0,0,0,0.5)' : 'rgba(15,23,42,0.18)';
+            ctx.shadowBlur = 5;
+            ctx.shadowOffsetY = 2;
+            ctx.fillStyle = bgColor;
+            ctx.beginPath();
+            ctx.moveTo(boxX + radius, boxY);
+            ctx.lineTo(boxX + boxWidth - radius, boxY);
+            ctx.arcTo(boxX + boxWidth, boxY, boxX + boxWidth, boxY + radius, radius);
+            ctx.lineTo(boxX + boxWidth, boxY + boxHeight - radius);
+            ctx.arcTo(boxX + boxWidth, boxY + boxHeight, boxX + boxWidth - radius, boxY + boxHeight, radius);
+            ctx.lineTo(boxX + radius, boxY + boxHeight);
+            ctx.arcTo(boxX, boxY + boxHeight, boxX, boxY + boxHeight - radius, radius);
+            ctx.lineTo(boxX, boxY + radius);
+            ctx.arcTo(boxX, boxY, boxX + radius, boxY, radius);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.shadowColor = 'transparent';
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, centerX, boxY + boxHeight / 2 + 0.5);
+            ctx.restore();
+        }
+
+        // ตัวเลข count-up: ไล่จากค่าเดิมบนหน้าจอไปยังค่าใหม่แบบนุ่มนวล พร้อมอัปเดตลูกศรเทียบรอบก่อนหน้า
+        function animateNumber(elId, endValueRaw) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.classList.remove('skeleton-number');
+            const endValue = Number(endValueRaw) || 0;
+            const startValue = Number((el.textContent || '0').toString().replace(/,/g, '')) || 0;
+            if (isFirstLoad || startValue === endValue || isNaN(startValue)) {
+                el.textContent = endValue.toLocaleString();
+            } else {
+                const duration = 650;
+                const startTime = performance.now();
+                const step = (now) => {
+                    const progress = Math.min((now - startTime) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = Math.round(startValue + (endValue - startValue) * eased).toLocaleString();
+                    if (progress < 1) requestAnimationFrame(step);
+                    else el.textContent = endValue.toLocaleString();
+                };
+                requestAnimationFrame(step);
+            }
+            newStats[elId] = endValue;
+            renderTrendArrow(elId, endValue);
+        }
+
+        // ตั้งค่าข้อความ (เช่น %) พร้อมลบ skeleton loading ออก — ใช้แทนการ set .textContent ตรงๆ
+        function setStatText(elId, text) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.classList.remove('skeleton-number');
+            el.textContent = text;
+        }
+
+        // ===== Badge % แบบไล่สีตามสถานะความคืบหน้า (เขียว/เหลือง/แดง) =====
+        const PERCENT_BADGE_CLASSES = {
+            good: ['text-emerald-600', 'bg-emerald-50', 'border-emerald-200'],
+            mid:  ['text-amber-600',   'bg-amber-50',   'border-amber-200'],
+            low:  ['text-rose-600',    'bg-rose-50',    'border-rose-200']
+        };
+        function setPercentBadge(elId, pct) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.classList.remove('skeleton-number');
+            el.textContent = pct.toFixed(1) + '%';
+            Object.values(PERCENT_BADGE_CLASSES).flat().forEach(c => el.classList.remove(c));
+            const tier = pct >= 90 ? 'good' : (pct >= 50 ? 'mid' : 'low');
+            el.classList.add(...PERCENT_BADGE_CLASSES[tier]);
+        }
+
+        // ลูกศร ▲/▼ เทียบกับค่ารอบก่อนหน้า (เก็บ snapshot ไว้ใน localStorage ใช้ได้ทั้ง auto-refresh และกดรีเฟรชเอง)
+        function renderTrendArrow(elId, endValue) {
+            const trendEl = document.getElementById(elId + '-trend');
+            if (!trendEl) return;
+            const prev = prevStats[elId];
+            if (isFirstLoad || prev === undefined || prev === null) { trendEl.innerHTML = ''; return; }
+            const diff = endValue - prev;
+            if (diff === 0) trendEl.innerHTML = `<span class="trend-badge trend-flat">±0</span>`;
+            else if (diff > 0) trendEl.innerHTML = `<span class="trend-badge trend-up">▲${diff.toLocaleString()}</span>`;
+            else trendEl.innerHTML = `<span class="trend-badge trend-down">▼${Math.abs(diff).toLocaleString()}</span>`;
+        }
+
+        // เวลาซิงค์แบบสัมพัทธ์ ("อัปเดตล่าสุด 3 นาทีที่แล้ว") เดินสดโดยไม่ fetch ใหม่
+        function renderLastUpdated() {
+            const el = document.getElementById('last-updated');
+            if (!el || !lastSyncDate) return;
+            const diffSec = Math.floor((Date.now() - lastSyncDate.getTime()) / 1000);
+            let text;
+            if (diffSec < 10) text = "อัปเดตล่าสุด: เมื่อสักครู่";
+            else if (diffSec < 60) text = `อัปเดตล่าสุด: ${diffSec} วินาทีที่แล้ว`;
+            else if (diffSec < 3600) text = `อัปเดตล่าสุด: ${Math.floor(diffSec / 60)} นาทีที่แล้ว`;
+            else text = `อัปเดตล่าสุด: ${Math.floor(diffSec / 3600)} ชั่วโมงที่แล้ว`;
+            el.textContent = text;
+            el.title = `เวลาซิงค์จริง: ${lastSyncDate.toLocaleTimeString('th-TH')} น.`;
+            el.className = "text-slate-600 font-bold";
+        }
+        setInterval(renderLastUpdated, 15000);
+
+        // Toast มุมจอ แจ้งผล auto-refresh / manual refresh สำเร็จหรือล้มเหลว
+        function showToast(message, type) {
+            const wrap = document.getElementById('toast-wrap');
+            if (!wrap) return;
+            const icon = type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️');
+            const item = document.createElement('div');
+            item.className = 'toast-item';
+            item.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+            wrap.appendChild(item);
+            setTimeout(() => {
+                item.classList.add('toast-leaving');
+                setTimeout(() => item.remove(), 260);
+            }, 3200);
+        }
+
+        // โหมดนำเสนอ (TV / จอใหญ่)
+        function exitPresentationOnEsc(e) { if (e.key === 'Escape') togglePresentationMode(); }
+        function togglePresentationMode() {
+            document.body.classList.toggle('presentation-mode');
+            if (document.body.classList.contains('presentation-mode')) {
+                showToast('เข้าสู่โหมดนำเสนอ กด Esc เพื่อออก', 'info');
+                document.addEventListener('keydown', exitPresentationOnEsc);
+            } else {
+                document.removeEventListener('keydown', exitPresentationOnEsc);
+            }
+        }
+
+        // ===== หา 3 แขวงที่ "คงเหลือ" เยอะสุดใน สทล. ที่ระบุ (ใช้กับ tooltip ของกราฟ) =====
+        function getTopRemainingKhwaeng(stlLabel, kind) {
+            const num = getStlNum(stlLabel);
+            let rows;
+            if (kind === 'shp') rows = buildAllShapefileRows().filter(r => getStlNum(r.stl) === num && r.status === 'remaining');
+            else rows = buildAllEnvRows().filter(r => getStlNum(r.stl) === num && (r.type === 'EAR' || r.type === 'EC') && r.envStatus5 === 'remaining');
+            const counts = {};
+            rows.forEach(r => { counts[r.khwaeng] = (counts[r.khwaeng] || 0) + 1; });
+            return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        }
+
+        // เติมรายชื่อแขวงคงเหลือเยอะสุดต่อท้าย tooltip เดิมของกราฟ (afterBody)
+        function makeRemainingTooltipAfterBody(kind) {
+            return (items) => {
+                if (!items.length) return [];
+                const label = items[0].label;
+                const top = getTopRemainingKhwaeng(label, kind);
+                if (!top.length) return ['', '✓ ไม่มีงานคงเหลือในแขวงใดเลย'];
+                const lines = ['', '🚩 แขวงที่คงเหลือเยอะสุด:'];
+                top.forEach(([kw, cnt], i) => lines.push(`${i + 1}. ${kw}: ${cnt.toLocaleString()} คำขอ`));
+                return lines;
+            };
+        }
+
+        // ===== เรียง/ค้นหา: กราฟ Shapefile =====
+        function toggleShpSort() {
+            shpSortDesc = !shpSortDesc;
+            const btn = document.getElementById('shpSortBtn');
+            if (btn) btn.classList.toggle('bg-emerald-50', shpSortDesc), btn.classList.toggle('border-emerald-300', shpSortDesc), btn.classList.toggle('text-emerald-600', shpSortDesc);
+            renderShpChart();
+        }
+
+        function renderShpChart() {
+            const canvas = document.getElementById('shpChart');
+            if (!canvas || !shpLabels.length) return;
+            const ctxShp = canvas.getContext('2d');
+            if (shpChartInstance) shpChartInstance.destroy();
+
+            let idxs = shpLabels.map((_, i) => i);
+            if (shpSortDesc) idxs.sort((a, b) => shpRemainingArr[b] - shpRemainingArr[a]);
+
+            const labels = idxs.map(i => shpLabels[i]);
+            const comp = idxs.map(i => shpCompletedArr[i]);
+            const rem = idxs.map(i => shpRemainingArr[i]);
+            const colors = idxs.map(i => shpCompletedColorsArr[i]);
+
+            shpChartInstance = new Chart(ctxShp, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'เสร็จสะสม (ลายเส้นทแยง = เสร็จสมบูรณ์แล้ว)', data: comp, backgroundColor: colors, borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 2, bottomRight: 2 }, borderSkipped: false },
+                        { label: 'คงเหลือ', data: rem, backgroundColor: CHART_COLORS.shpRemaining, borderRadius: { topLeft: 2, topRight: 2, bottomLeft: 0, bottomRight: 0 }, borderSkipped: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) showDetailModal('shapefile', labels[elements[0].index], elements[0].datasetIndex);
+                    },
+                    plugins: {
+                        legend: { position: 'top', labels: { color: chartTextColor(), font: { size: isSmallScreen ? 10 : 12, weight: '800' }, boxWidth: 10 } },
+                        datalabels: { display: false },
+                        tooltip: {
+                            titleFont: { family: 'Sarabun', weight: '800' }, bodyFont: { family: 'Sarabun' },
+                            callbacks: { afterBody: makeRemainingTooltipAfterBody('shp') }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { color: chartTickColor(), font: { size: isSmallScreen ? 9 : 11, weight: '800' } } },
+                        y: { stacked: true, grid: { color: chartGridColor() }, ticks: { color: chartTickColor(), font: { size: isSmallScreen ? 9 : 11 } } }
+                    }
+                }
+            });
+        }
+
+        // ===== กราฟโดนัท: แผนที่คำขอ =====
+        function renderMapChart() {
+            const canvas = document.getElementById('mapPieChart');
+            if (!canvas) return;
+            const ctxMap = canvas.getContext('2d');
+            if (mapPieChartInstance) mapPieChartInstance.destroy();
+            mapPieChartInstance = new Chart(ctxMap, {
+                type: 'doughnut',
+                data: { labels: ['เสร็จสะสม', 'คงเหลือ'], datasets: [{ data: [mapCompVal, mapRemVal], backgroundColor: [CHART_COLORS.mapComplete, CHART_COLORS.mapRemaining], borderWidth: 0, borderRadius: 5, spacing: 2, hoverOffset: 6 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, layout: { padding: 6 }, cutout: '68%',
+                    onClick: (event, elements) => { if (elements.length > 0) showDetailModal('map', 'ทุกภูมิภาค', elements[0].index); },
+                    plugins: {
+                        legend: { display: true, position: 'right', align: 'center', labels: { color: chartTextColor(), font: { size: isSmallScreen ? 9 : 11 }, usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 8 } },
+                        datalabels: {
+                            display: true, color: '#ffffff', font: { weight: '900', size: isSmallScreen ? 9 : 11 }, textAlign: 'center',
+                            formatter: (value, ctx) => {
+                                let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                let pct = sum > 0 ? ((value * 100) / sum).toFixed(1) + "%" : "0%";
+                                return value > 0 ? `${value.toLocaleString()}\n(${pct})` : '';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ===== เรียง: กราฟรายงานสิ่งแวดล้อม =====
+        function toggleEnvSort() {
+            envSortDesc = !envSortDesc;
+            const btn = document.getElementById('envSortBtn');
+            if (btn) btn.classList.toggle('bg-indigo-50', envSortDesc), btn.classList.toggle('border-indigo-300', envSortDesc), btn.classList.toggle('text-indigo-600', envSortDesc);
+            renderEnvBarChart();
+        }
+
+        // ===== ฉลองเล็กๆ ตอน สทล. ไหนปิดงาน Shapefile ครบ 100% (transition คงเหลือ >0 -> 0 ระหว่างรอบ) =====
+        const SHP_REMAINING_SNAPSHOT_KEY = 'forestDashboardShpRemainingByStl_v1';
+        let prevShpRemainingByStl = (() => { try { return JSON.parse(localStorage.getItem(SHP_REMAINING_SNAPSHOT_KEY) || '{}'); } catch (e) { return {}; } })();
+
+        function checkShpCompletionCelebration(labelsArr, remainingArr) {
+            if (isFirstLoad) return; // ไม่ฉลองตอนโหลดหน้าครั้งแรก
+            labelsArr.forEach((lbl, i) => {
+                const rem = remainingArr[i] || 0;
+                const prevRem = prevShpRemainingByStl[lbl];
+                if (prevRem !== undefined && prevRem > 0 && rem === 0) {
+                    fireConfetti();
+                    showToast(`🎉 ${lbl} ปิดงาน Shapefile ครบ 100% แล้ว!`, 'success');
+                }
+            });
+        }
+
+        function saveShpRemainingSnapshot(labelsArr, remainingArr) {
+            const map = {};
+            labelsArr.forEach((lbl, i) => { map[lbl] = remainingArr[i] || 0; });
+            prevShpRemainingByStl = map;
+            try { localStorage.setItem(SHP_REMAINING_SNAPSHOT_KEY, JSON.stringify(map)); } catch (e) {}
+        }
+
+        function fireConfetti() {
+            const colors = ['#f43f5e', '#f59e0b', '#10b981', '#6366f1', '#0ea5e9'];
+            for (let i = 0; i < 40; i++) {
+                const piece = document.createElement('div');
+                piece.style.position = 'fixed';
+                piece.style.left = (45 + Math.random() * 10) + 'vw';
+                piece.style.top = '-10px';
+                piece.style.width = '8px';
+                piece.style.height = '8px';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                piece.style.zIndex = 300;
+                piece.style.pointerEvents = 'none';
+                piece.style.opacity = '0.9';
+                document.body.appendChild(piece);
+                const duration = 1800 + Math.random() * 900;
+                const xDrift = (Math.random() - 0.5) * 300;
+                const anim = piece.animate([
+                    { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+                    { transform: `translate(${xDrift}px, 100vh) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+                ], { duration, easing: 'ease-in' });
+                anim.onfinish = () => piece.remove();
+                setTimeout(() => piece.remove(), duration + 200);
+            }
+        }
+
+        // ===== โหมดมืด/สว่าง =====
+        const DARK_MODE_KEY = 'forestDashboardDarkMode';
+        function updateDarkModeBtnIcon() {
+            const isDark = document.body.classList.contains('dark-mode');
+            const icon = document.getElementById('darkmode-icon');
+            const label = document.getElementById('darkmode-label');
+            if (label) label.textContent = isDark ? 'โหมดสว่าง' : 'โหมดมืด';
+            if (icon) icon.innerHTML = isDark
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"/>';
+        }
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            try { localStorage.setItem(DARK_MODE_KEY, isDark ? '1' : '0'); } catch (e) {}
+            updateDarkModeBtnIcon();
+            // รีเรนเดอร์กราฟให้สีตัวอักษร/เส้นกริดเปลี่ยนตามโหมดทันที (ถ้ามีข้อมูลโหลดแล้ว)
+            if (shpLabels.length) renderShpChart();
+            if (mapPieChartInstance) renderMapChart();
+            if (envBarLabels.length) renderEnvBarChart();
+        }
+        (function initDarkModePref() {
+            try { if (localStorage.getItem(DARK_MODE_KEY) === '1') document.body.classList.add('dark-mode'); } catch (e) {}
+        })();
+
+        Chart.register(ChartDataLabels);
+        const isSmallScreen = window.innerWidth < 768;
+        updateDarkModeBtnIcon();
+        Chart.defaults.font.family = 'Sarabun';
+        Chart.defaults.font.size = isSmallScreen ? 10 : 12;
+        Chart.defaults.font.weight = '700';
+        Chart.defaults.plugins.legend.labels.boxWidth = isSmallScreen ? 10 : 12;
+
+        // ===== Utility =====
+        // ดึงเลข สทล. ออกมาจากข้อความ เช่น "สทล.01" -> 1, ใช้จับคู่ label ของกราฟกับข้อมูลดิบ (r.stl)
+        function getStlNum(str) {
+            const m = (str || '').toString().match(/(\d+)/);
+            return m ? parseInt(m[1], 10) : null;
+        }
+
+        function createDiagonalPattern(color) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 10; canvas.height = 10;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, 10, 10);
+            ctx.strokeStyle = 'rgba(15, 23, 42, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(10, 0); ctx.stroke();
+            return ctx.createPattern(canvas, 'repeat');
+        }
+
+        function formatDisplayDate(dateVal) {
+            const today = new Date();
+            const formatOptions = { day: 'numeric', month: 'short', year: '2-digit' };
+            if (!dateVal || dateVal.toString().trim() === "") return today.toLocaleDateString('th-TH', formatOptions);
+            if (dateVal.toString().includes("T") || !isNaN(Date.parse(dateVal))) {
+                const d = new Date(dateVal);
+                if (!isNaN(d.getTime()) && d.getFullYear() > 1975) return d.toLocaleDateString('th-TH', formatOptions);
+            }
+            return today.toLocaleDateString('th-TH', formatOptions);
+        }
+
+        // ใช้สำหรับการ์ด "รายงานสิ่งแวดล้อม" ที่ดึง % มาจากเซลล์ในชีทตรงๆ (AT25)
+        // รองรับทั้งกรณีเซลล์เก็บเป็นข้อความ "20.9%" สำเร็จรูป, ตัวเลข 20.9, หรือเศษส่วนทศนิยม 0.209
+        function formatPercentCell(val) {
+            if (val === undefined || val === null || val.toString().trim() === "") return "0%";
+            const str = val.toString().trim();
+            if (str.includes('%')) return str;
+            const num = parseFloat(str.replace(',', '.'));
+            if (isNaN(num)) return "0%";
+            const pct = (num > 0 && num <= 1) ? num * 100 : num;
+            return pct.toFixed(1) + "%";
+        }
+
+        // ===== สถานะการเชื่อมต่อ (badge "Connected" / "Offline") =====
+        // ผูก badge เข้ากับผลจริงของการ fetch ข้อมูลใน initDashboard() (ไม่ใช่ static text อีกต่อไป)
+        function setConnectionStatus(isOnline) {
+            const badge = document.getElementById('connection-badge');
+            const dot   = document.getElementById('connection-dot');
+            const text  = document.getElementById('connection-text');
+            if (!badge || !dot || !text) return;
+            if (isOnline) {
+                badge.className = "text-emerald-600 font-extrabold flex items-center gap-1.5";
+                dot.className   = "h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse";
+                text.textContent = "Connected";
+            } else {
+                badge.className = "text-rose-500 font-extrabold flex items-center gap-1.5";
+                dot.className   = "h-2.5 w-2.5 rounded-full bg-rose-500";
+                text.textContent = "Offline";
+            }
+        }
+
+        // ===== รีเฟรชข้อมูลด้วยตนเอง (ปุ่ม "รีเฟรช" ใน HEADER) =====
+        async function manualRefresh() {
+            const btn  = document.getElementById('refresh-btn');
+            const icon = document.getElementById('refresh-icon');
+            if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); }
+            if (icon) icon.classList.add('animate-spin');
+            try {
+                await initDashboard();
+            } finally {
+                if (btn) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+                if (icon) icon.classList.remove('animate-spin');
+            }
+        }
+
+        // ===== MAIN DASHBOARD =====
+        async function initDashboard() {
+            try {
+                const res = await fetch(`${WEB_APP_URL}?token=${encodeURIComponent(ACCESS_TOKEN)}`);
+                if (!res.ok) throw new Error("ดึงข้อมูลไม่สำเร็จ");
+                const result = await res.json();
+
+                // โครงสร้างข้อมูลใหม่จาก Apps Script: { summary: [...], raw: [...] }
+                const sheetData = result.summary || [];
+                currentSheetData = result.raw || []; // ข้อมูลดิบรายคำขอ (ชีท "รวมคำขอ") ใช้กับโมดัลรายละเอียดคำขอรายวัน
+
+                // === Summary row (ใช้ column index จากไฟล์ 2.html / 1.html — เหมือนกัน) ===
+                const summaryRow = sheetData.find(row => row[26] && (row[26].toString().includes("รวม") || row[26].toString().includes("Total")));
+
+                if (summaryRow) {
+                    // --- วันที่ ---
+                    // ใช้วันที่ปัจจุบันจริงของระบบเป็นวันที่อ้างอิงในกรอบ "ความคืบหน้า" (ไม่ใช้ค่าจากชีทสรุปอีกต่อไป เพราะคอลัมน์นั้นไม่ใช่วันที่)
+                    currentReportDate = new Date();
+                    document.getElementById('custom-title-date').textContent = `วันที่ ${formatDisplayDate(currentReportDate)}`;
+
+                    // --- Stat Cards ---
+                    animateNumber('total-requests', Number(summaryRow[27]));
+
+                    const shpComp = Number(summaryRow[29]);
+                    const shpRem  = Number(summaryRow[30]);
+                    const shpTotal = shpComp + shpRem;
+                    animateNumber('shp-total', shpTotal);
+                    animateNumber('shp-completed', shpComp);
+                    animateNumber('shp-remaining', shpRem);
+                    setPercentBadge('shp-percent', shpTotal > 0 ? (shpComp / shpTotal) * 100 : 0);
+
+                    const mapReq  = Number(summaryRow[32]);
+                    const mapComp = Number(summaryRow[35]);
+                    const mapRem  = Number(summaryRow[36]);
+                    animateNumber('map-total', mapReq);
+                    animateNumber('map-completed', mapComp);
+                    animateNumber('map-remaining', mapRem);
+                    setPercentBadge('map-percent', mapReq > 0 ? (mapComp / mapReq) * 100 : 0);
+
+                    // === การ์ด 4 "รายงานสิ่งแวดล้อม" ===
+                    // คำนวณสดจากข้อมูลรายคำขอด้วย buildAllEnvRows() ซึ่งเป็นฟังก์ชันเดียวกับที่ใช้สร้างกราฟโดนัท
+                    // "รายงานสิ่งแวดล้อม" ด้านล่าง เพื่อให้ตัวเลขในการ์ดนี้ตรงกับกราฟโดนัทเสมอ (ไม่พึ่งเซลล์สรุปจากชีทอีกต่อไป)
+                    // สถานะ: complete = สมบูรณ์, waiting = รอร่างรายงานจากแขวง, remaining = คงเหลือ (ยังไม่ได้ส่งร่าง)
+                    const envRowsForCard = buildAllEnvRows();
+                    const envCompEarRows = envRowsForCard.filter(r => r.envStatus4 === 'complete' && r.type === 'EAR');
+                    const envCompEcRows  = envRowsForCard.filter(r => r.envStatus4 === 'complete' && r.type === 'EC');
+                    // แขวงส่งกลับแล้ว: ใช้ envStatus4 (single source of truth จาก buildAllEnvRows)
+                    const envRetEarRows  = envRowsForCard.filter(r => r.envStatus4 === 'returned' && r.type === 'EAR');
+                    const envRetEcRows   = envRowsForCard.filter(r => r.envStatus4 === 'returned' && r.type === 'EC');
+                    const envWaitEarRows = envRowsForCard.filter(r => r.envStatus4 === 'waiting'  && r.type === 'EAR');
+                    const envWaitEcRows  = envRowsForCard.filter(r => r.envStatus4 === 'waiting'  && r.type === 'EC');
+                    // "คงเหลือ" / "รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)": ใช้ envStatus5 (แยกจาก envStatus4 เดิม)
+                    // เพื่อดึงกรณี "ซ้ำ/สับเซต" (คอลัมน์ AA) ออกจาก "คงเหลือ" เดิม โดยไม่กระทบสถานะอื่น (complete/returned/waiting)
+                    const envRemEarRows  = envRowsForCard.filter(r => r.envStatus5 === 'remaining' && r.type === 'EAR');
+                    const envRemEcRows   = envRowsForCard.filter(r => r.envStatus5 === 'remaining' && r.type === 'EC');
+                    const envPendEarRows = envRowsForCard.filter(r => r.envStatus5 === 'pendingBook' && r.type === 'EAR');
+                    const envPendEcRows  = envRowsForCard.filter(r => r.envStatus5 === 'pendingBook' && r.type === 'EC');
+
+                    const envCompEar = envCompEarRows.length, envCompEc = envCompEcRows.length;
+                    const envRetEar  = envRetEarRows.length,  envRetEc  = envRetEcRows.length;
+                    const envWaitEar = envWaitEarRows.length, envWaitEc = envWaitEcRows.length;
+                    const envRemEar  = envRemEarRows.length,  envRemEc  = envRemEcRows.length;
+                    const envPendEar = envPendEarRows.length, envPendEc = envPendEcRows.length;
+
+                    const envTotalEar = envCompEar + envRetEar + envWaitEar + envRemEar + envPendEar;
+                    const envTotalEc  = envCompEc  + envRetEc  + envWaitEc  + envRemEc  + envPendEc;
+                    const envComp  = envCompEar + envCompEc;
+                    const envRet   = envRetEar  + envRetEc;
+                    const envWait  = envWaitEar + envWaitEc;
+                    const envRem   = envRemEar  + envRemEc;
+                    const envPend  = envPendEar + envPendEc;
+                    const envTotal = envTotalEar + envTotalEc;
+
+                    animateNumber('env-total', envTotal);
+                    animateNumber('env-completed', envComp);
+                    animateNumber('env-returned', envRet);
+                    animateNumber('env-waiting', envWait);
+                    animateNumber('env-remaining', envRem);
+                    animateNumber('env-pendingbook', envPend);
+
+                    // % สมบูรณ์ = สมบูรณ์ / ต้องทำ (คำนวณสดให้ตรงกับตัวเลขในการ์ดเดียวกัน)
+                    setPercentBadge('env-percent', envTotal > 0 ? (envComp / envTotal) * 100 : 0);
+
+                    // --- ย่อย EAR/EC ของรายงานสิ่งแวดล้อม ---
+                    document.getElementById('env-total-ear').textContent = envTotalEar.toLocaleString();
+                    document.getElementById('env-total-ec').textContent  = envTotalEc.toLocaleString();
+                    document.getElementById('env-completed-ear').textContent = envCompEar.toLocaleString();
+                    document.getElementById('env-completed-ec').textContent  = envCompEc.toLocaleString();
+                    document.getElementById('env-returned-ear').textContent  = envRetEar.toLocaleString();
+                    document.getElementById('env-returned-ec').textContent   = envRetEc.toLocaleString();
+                    document.getElementById('env-waiting-ear').textContent   = envWaitEar.toLocaleString();
+                    document.getElementById('env-waiting-ec').textContent    = envWaitEc.toLocaleString();
+                    document.getElementById('env-remaining-ear').textContent = envRemEar.toLocaleString();
+                    document.getElementById('env-remaining-ec').textContent  = envRemEc.toLocaleString();
+                    document.getElementById('env-pendingbook-ear').textContent = envPendEar.toLocaleString();
+                    document.getElementById('env-pendingbook-ec').textContent  = envPendEc.toLocaleString();
+
+                    // --- Panel Left (กรอบ 2): Shapefile badge ---
+                    const totalShpDate = Number(summaryRow[28]) || 0;
+                    const shpHdr     = document.getElementById('shp-box-header');
+                    const shpSubText = document.getElementById('date-shp-total-sub');
+                    const oldShpBadge = document.getElementById('dynamic-shp-badge');
+                    if (oldShpBadge) oldShpBadge.remove();
+                    if (totalShpDate > 0) {
+                        shpSubText.classList.add('hidden');
+                        const badge = document.createElement('span');
+                        badge.id = "dynamic-shp-badge";
+                        badge.textContent = `+ ${totalShpDate} คำขอ`;
+                        badge.className = "text-sm font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-pulse shrink-0";
+                        shpHdr.appendChild(badge);
+                    } else {
+                        shpSubText.textContent = "0 คำขอ";
+                        shpSubText.className = "text-xs text-slate-400 font-bold shrink-0";
+                        shpSubText.classList.remove('hidden');
+                    }
+
+                    // --- Panel Left: แผนที่ badge ---
+                    const totalMapDate = Number(summaryRow[34]) || 0;
+                    const mapHdr     = document.getElementById('map-box-header');
+                    const mapSubText = document.getElementById('date-map-total-sub');
+                    const oldMapBadge = document.getElementById('dynamic-map-badge');
+                    if (oldMapBadge) oldMapBadge.remove();
+                    if (totalMapDate > 0) {
+                        mapSubText.classList.add('hidden');
+                        const badge = document.createElement('span');
+                        badge.id = "dynamic-map-badge";
+                        badge.textContent = `+ ${totalMapDate} คำขอ`;
+                        badge.className = "text-sm font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 animate-pulse shrink-0";
+                        mapHdr.appendChild(badge);
+                    } else {
+                        mapSubText.textContent = "0 คำขอ";
+                        mapSubText.className = "text-xs text-slate-400 font-bold shrink-0";
+                        mapSubText.classList.remove('hidden');
+                    }
+
+                    // --- Panel Left: สิ่งแวดล้อม badge ---
+                    // อ้างอิงคอลัมน์จากชีทสรุป (แถวรายสทล.): AO(40)=ร่างส่งเขต, AP(41)=รับจากแขวง, AS(44)=สมบูรณ์ "รวม" (EAR+EC วันนี้)
+                    // หมายเหตุ: คอลัมน์ "สมบูรณ์" ต้องใช้ AS (รวม) ไม่ใช่ AQ (42, เฉพาะ EAR) เพราะ AQ นับได้แค่ EAR ทำให้ยอดขาดไป
+                    let totalEnvDraft = 0, totalEnvRecv = 0, totalEnvComp2 = 0;
+                    let shpHtml = "", mapHtml = "", envDraftHtml = "", envCompHtml = "", envRecvHtml = "";
+                    sheetData.forEach(row => {
+                        if (row[26] && row[26].toString().startsWith("สทล.")) {
+                            const stlName = row[26].toString();
+                            const vShp = Number(row[28]) || 0;
+                            if (vShp > 0) shpHtml += `<div class="flex justify-between items-center border-b border-slate-100 py-0.5 text-slate-600"><span>• ${stlName}</span><span class="text-emerald-600 font-extrabold">${vShp} คำขอ</span></div>`;
+                            const vMap = Number(row[34]) || 0;
+                            if (vMap > 0) mapHtml += `<div class="flex justify-between items-center border-b border-slate-100 py-0.5 text-slate-600"><span>• ${stlName}</span><span class="text-amber-500 font-extrabold">${vMap} คำขอ</span></div>`;
+                            const vEnvDraft = Number(row[40]) || 0; // AO
+                            if (vEnvDraft > 0) {
+                                totalEnvDraft += vEnvDraft;
+                                envDraftHtml += `<div class="flex justify-between items-center py-0.5 text-slate-600"><span>- ${stlName}</span><span class="font-extrabold text-indigo-600">${vEnvDraft} คำขอ</span></div>`;
+                            }
+                            const vEnvRecv = Number(row[41]) || 0; // AP
+                            if (vEnvRecv > 0) {
+                                totalEnvRecv += vEnvRecv;
+                                envRecvHtml += `<div class="flex justify-between items-center py-0.5 text-slate-600"><span>- ${stlName}</span><span class="font-extrabold text-indigo-600">${vEnvRecv} คำขอ</span></div>`;
+                            }
+                            const vEnvComp = Number(row[44]) || 0; // AS = สมบูรณ์ "รวม" (EAR+EC)
+                            if (vEnvComp > 0) {
+                                totalEnvComp2 += vEnvComp;
+                                envCompHtml += `<div class="flex justify-between items-center py-0.5 text-slate-600"><span>- ${stlName}</span><span class="font-extrabold text-indigo-600">${vEnvComp} คำขอ</span></div>`;
+                            }
+                        }
+                    });
+
+                    document.getElementById('date-shp-list').innerHTML = shpHtml;
+                    document.getElementById('date-map-list').innerHTML = mapHtml;
+
+                    const cList = document.getElementById('date-env-comp-list');
+                    if (totalEnvComp2 > 0) { cList.innerHTML = envCompHtml; cList.classList.remove('hidden'); } else { cList.classList.add('hidden'); }
+                    const dList = document.getElementById('date-env-draft-list');
+                    if (totalEnvDraft > 0) { dList.innerHTML = envDraftHtml; dList.classList.remove('hidden'); } else { dList.classList.add('hidden'); }
+                    const rList = document.getElementById('date-env-recv-list');
+                    if (totalEnvRecv > 0) { rList.innerHTML = envRecvHtml; rList.classList.remove('hidden'); } else { rList.classList.add('hidden'); }
+
+                    const totalEnvAll = totalEnvDraft + totalEnvComp2 + totalEnvRecv;
+                    const envHdr    = document.getElementById('env-box-header');
+                    const envSubAll = document.getElementById('date-env-total-sub');
+                    const oldEnvBadge = document.getElementById('dynamic-env-badge');
+                    if (oldEnvBadge) oldEnvBadge.remove();
+                    if (totalEnvAll > 0) {
+                        envSubAll.classList.add('hidden');
+                        const badge = document.createElement('span');
+                        badge.id = "dynamic-env-badge";
+                        badge.textContent = `+ ${totalEnvAll} คำขอ`;
+                        badge.className = "text-sm font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 animate-pulse shrink-0";
+                        envHdr.appendChild(badge);
+                    } else {
+                        envSubAll.textContent = "0 คำขอ";
+                        envSubAll.className = "text-xs text-slate-400 font-bold shrink-0";
+                        envSubAll.classList.remove('hidden');
+                    }
+                }
+
+                // === Bar Chart: Shapefile (row[26]=ชื่อสทล. รวม, row[29]=เสร็จ, row[30]=เหลือ) ===
+                const labels = [];
+                const shpCompletedColors = [];
+                const shpCompletedDataset = [];
+                const shpRemainingDataset = [];
+
+                sheetData.forEach(row => {
+                    if (row[26] && row[26].toString().startsWith("สทล.")) {
+                        labels.push(row[26].toString());
+                        const completedValue = Number(row[29]) || 0;
+                        const remainingValue  = Number(row[30]) || 0;
+                        shpCompletedDataset.push(completedValue);
+                        shpRemainingDataset.push(remainingValue);
+                        shpCompletedColors.push(
+                            (remainingValue === 0 && completedValue > 0)
+                                ? createDiagonalPattern(CHART_COLORS.shpComplete)
+                                : CHART_COLORS.shpCompletePartial
+                        );
+                    }
+                });
+
+                const now = new Date();
+                lastSyncDate = now;
+                renderLastUpdated();
+
+                // ตรวจว่ามี สทล. ไหนเพิ่งปิดงาน Shapefile ครบ 100% ระหว่างรอบนี้กับรอบก่อนหน้าหรือไม่ (ฉลองด้วย confetti + toast)
+                checkShpCompletionCelebration(labels, shpRemainingDataset);
+                saveShpRemainingSnapshot(labels, shpRemainingDataset);
+
+                shpLabels = labels;
+                shpCompletedArr = shpCompletedDataset;
+                shpRemainingArr = shpRemainingDataset;
+                shpCompletedColorsArr = shpCompletedColors;
+                renderShpChart();
+
+                // === Donut: แผนที่ ===
+                mapCompVal = summaryRow ? Number(summaryRow[35]) : 0;
+                mapRemVal  = summaryRow ? Number(summaryRow[36]) : 0;
+                renderMapChart();
+
+                // === Stacked Bar: รายงานสิ่งแวดล้อม รายสทล. (Completed / Waiting / Remaining ต่อ สทล.01-18) ===
+                // คำนวณสดจากข้อมูลรายคำขอ (currentSheetData) ผ่าน buildAllEnvRows() (ฟังก์ชันเดิม ไม่แตะ business logic)
+                // จับคู่ตามลำดับ สทล. เดียวกับกราฟ Shapefile (ตัวแปร labels ด้านบน) เพื่อให้ทั้งสองกราฟเรียงตรงกัน
+                const allEnvRows = buildAllEnvRows().filter(r => r.type === 'EAR' || r.type === 'EC');
+                // สร้างรายชื่อ สทล. ตรงจากข้อมูล env เอง (แหล่งเดียวกับที่ใช้ในหน้าต่างแจกแจงรายละเอียดรายแขวง)
+                // ไม่พึ่งพา labels ของกราฟ Shapefile อีกต่อไป เพื่อให้ยอดรวมของกราฟนี้ตรงกับยอดจริงเสมอ
+                const envStlNameByNum = {};
+                allEnvRows.forEach(r => {
+                    const num = getStlNum(r.stl);
+                    if (num === null) return;
+                    if (!envStlNameByNum[num]) envStlNameByNum[num] = r.stl; // เก็บชื่อที่แสดงผล (ครั้งแรกที่เจอ)
+                });
+                envBarLabels = Object.keys(envStlNameByNum)
+                    .map(Number)
+                    .sort((a, b) => a - b)
+                    .map(num => envStlNameByNum[num]);
+                envBarCompletedRaw = [];
+                envBarReturnedRaw = [];
+                envBarWaitingRaw = [];
+                envBarRemainingRaw = [];
+                envBarPendingBookRaw = [];
+                envBarLabels.forEach(lbl => {
+                    const num = getStlNum(lbl);
+                    const rowsForStl = allEnvRows.filter(r => getStlNum(r.stl) === num);
+                    envBarCompletedRaw.push(rowsForStl.filter(r => r.envStatus4 === 'complete').length);
+                    // แขวงส่งกลับแล้ว: ใช้ envStatus4 (single source of truth จาก buildAllEnvRows)
+                    envBarReturnedRaw.push(rowsForStl.filter(r => r.envStatus4 === 'returned').length);
+                    envBarWaitingRaw.push(rowsForStl.filter(r => r.envStatus4 === 'waiting').length);
+                    // คงเหลือ / รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง): ใช้ envStatus5 เพื่อแยกกรณี AA = ซ้ำ/สับเซต ออกจาก "คงเหลือ" เดิม
+                    envBarRemainingRaw.push(rowsForStl.filter(r => r.envStatus5 === 'remaining').length);
+                    envBarPendingBookRaw.push(rowsForStl.filter(r => r.envStatus5 === 'pendingBook').length);
+                });
+                renderEnvBarChart();
+
+                setConnectionStatus(true);
+
+                // บันทึก snapshot ตัวเลขรอบนี้ไว้เทียบกับรอบถัดไป (▲/▼) — ใช้ได้ทั้ง auto-refresh ทุกชั่วโมงและกดรีเฟรชเอง
+                try { localStorage.setItem(TREND_STORAGE_KEY, JSON.stringify(newStats)); } catch (e) {}
+                prevStats = newStats;
+                newStats = {};
+                if (!isFirstLoad) showToast('รีเฟรชข้อมูลสำเร็จ', 'success');
+
+            } catch (err) {
+                console.error("Error:", err);
+                document.getElementById('last-updated').textContent = "Connection Error";
+                document.getElementById('last-updated').className = "text-lg text-rose-500 font-bold";
+                setConnectionStatus(false);
+                showToast('รีเฟรชข้อมูลไม่สำเร็จ กรุณาลองใหม่', 'error');
+            } finally {
+                isFirstLoad = false;
+            }
+        }
+
+        // ===== กราฟแท่ง "รายงานสิ่งแวดล้อม" รายสทล. (Stacked Bar) =====
+        // คำนวณ dataset ตามโหมดที่เลือก: 'count' = จำนวนงานจริง, 'percent' = 100% stacked (เทียบสัดส่วนโดยไม่สนขนาดงาน)
+        function computeEnvChartDatasets() {
+            if (envChartMode === 'percent') {
+                const comp = [], ret = [], wait = [], rem = [], pend = [];
+                envBarLabels.forEach((_, i) => {
+                    const total = envBarCompletedRaw[i] + envBarReturnedRaw[i] + envBarWaitingRaw[i] + envBarRemainingRaw[i] + envBarPendingBookRaw[i];
+                    if (total > 0) {
+                        comp.push(+(envBarCompletedRaw[i] / total * 100).toFixed(1));
+                        ret.push(+(envBarReturnedRaw[i] / total * 100).toFixed(1));
+                        wait.push(+(envBarWaitingRaw[i] / total * 100).toFixed(1));
+                        rem.push(+(envBarRemainingRaw[i] / total * 100).toFixed(1));
+                        pend.push(+(envBarPendingBookRaw[i] / total * 100).toFixed(1));
+                    } else {
+                        comp.push(0); ret.push(0); wait.push(0); rem.push(0); pend.push(0);
+                    }
+                });
+                return { comp, ret, wait, rem, pend };
+            }
+            return { comp: envBarCompletedRaw, ret: envBarReturnedRaw, wait: envBarWaitingRaw, rem: envBarRemainingRaw, pend: envBarPendingBookRaw };
+        }
+
+// ลำดับต้องตรงกับ datasets ใน renderEnvBarChart
+const ENV_STATUS_BY_DATASET = ['remaining', 'pendingBook', 'waiting', 'returned', 'complete'];
+
+function getEnvVisibleStatuses() {
+    if (!envBarChartInstance) return [...ENV_STATUS_BY_DATASET];
+    return ENV_STATUS_BY_DATASET.filter((_, i) => envBarChartInstance.isDatasetVisible(i));
+}
+
+        function renderEnvBarChart() {
+            const canvas = document.getElementById('envBarChart');
+            if (!canvas) return;
+            const ctxEnv = canvas.getContext('2d');
+            const { comp, ret, wait, rem, pend } = computeEnvChartDatasets();
+            const isPercent = envChartMode === 'percent';
+            // ยอดรวมจริง (จำนวนคำขอ) ต่อ สทล. ไว้แสดงเป็นตัวเลขสรุปเหนือแท่ง ไม่ว่าจะอยู่โหมดจำนวนงาน/% ก็ตาม
+            const rawTotals = envBarLabels.map((_, i) => envBarCompletedRaw[i] + envBarReturnedRaw[i] + envBarWaitingRaw[i] + envBarRemainingRaw[i] + envBarPendingBookRaw[i]);
+
+            // เรียง: ใช้ค่า "คงเหลือ" ดิบ (envBarRemainingRaw) เป็นเกณฑ์เรียงเสมอ ไม่ว่าจะอยู่โหมดจำนวนงาน/% ก็ตาม
+            let idxs = envBarLabels.map((_, i) => i);
+            if (envSortDesc) idxs.sort((a, b) => envBarRemainingRaw[b] - envBarRemainingRaw[a]);
+
+            const labels  = idxs.map(i => envBarLabels[i]);
+            const compS   = idxs.map(i => comp[i]);
+            const retS    = idxs.map(i => ret[i]);
+            const waitS   = idxs.map(i => wait[i]);
+            const remS    = idxs.map(i => rem[i]);
+            const pendS   = idxs.map(i => pend[i]);
+            const rawTotalsS = idxs.map(i => rawTotals[i]);
+
+            if (envBarChartInstance) envBarChartInstance.destroy();
+            // มนเฉพาะขอบนอกสุดของแท่ง (บนสุด/ล่างสุดที่มีค่า > 0 ในแต่ละ สทล.) ส่วนตรงกลางเป็นเหลี่ยม
+            // ต้องคำนวณเป็นรายแท่ง (ไม่ใช่ผูกไว้ตายตัวกับ dataset คงเหลือ/สมบูรณ์) เพราะบาง สทล. อาจไม่มีคงเหลือ
+            // ทำให้ dataset ถัดไปกลายเป็นฐานล่างสุดจริงของแท่งนั้นแทน
+            const envStackRadius = (chart, datasetIndex, dataIndex, radius = 2) => {
+    const vals = [remS, pendS, waitS, retS, compS]
+        .map((arr, i) => chart.isDatasetVisible(i) ? arr[dataIndex] : 0);
+                const nz = vals.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
+                const bottomIdx = nz.length ? nz[0] : -1;
+                const topIdx = nz.length ? nz[nz.length - 1] : -1;
+                const isBottom = datasetIndex === bottomIdx;
+                const isTop = datasetIndex === topIdx;
+                if (!isBottom && !isTop) return 0;
+                return {
+                    bottomLeft: isBottom ? radius : 0, bottomRight: isBottom ? radius : 0,
+                    topLeft: isTop ? radius : 0, topRight: isTop ? radius : 0
+                };
+            };
+            envBarChartInstance = new Chart(ctxEnv, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    // ลำดับ dataset กำหนดลำดับการซ้อนแท่ง (dataset แรก = ฐานล่างสุด ของแท่ง)
+                    // เรียงจากล่างสุด: คงเหลือ -> รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง) -> รอแขวง -> แขวงส่งกลับแล้ว -> สมบูรณ์ (บนสุด)
+                    datasets: [
+                        { label: 'คงเหลือ', data: remS, backgroundColor: CHART_COLORS.remaining, borderRadius: (ctx) => envStackRadius(ctx.chart, 0, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', data: pendS, backgroundColor: CHART_COLORS.pendingBook, borderRadius: (ctx) => envStackRadius(ctx.chart, 1, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'รอแขวง', data: waitS, backgroundColor: CHART_COLORS.waiting, borderRadius: (ctx) => envStackRadius(ctx.chart, 2, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'แขวงส่งกลับแล้ว', data: retS, backgroundColor: CHART_COLORS.returned, borderRadius: (ctx) => envStackRadius(ctx.chart, 3, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 },
+                        { label: 'สมบูรณ์', data: compS, backgroundColor: CHART_COLORS.complete, borderRadius: (ctx) => envStackRadius(ctx.chart, 4, ctx.dataIndex), borderSkipped: false, maxBarThickness: 42 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 600, easing: 'easeOutQuart' },
+                    layout: { padding: { top: 26 } },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            showEnvDistrictModal(labels[elements[0].index]);
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: chartTextColor(), font: { size: isSmallScreen ? 10 : 12, weight: '800' }, boxWidth: 10,
+                                // เรียง legend ให้ตรงกับลำดับการ์ดด้านบน (สมบูรณ์ -> ส่งกลับแล้ว -> รอแขวง -> รอทำเล่ม -> คงเหลือ)
+                                // โดยไม่กระทบลำดับ dataset จริงที่กำหนดการซ้อนแท่ง
+                                generateLabels: (chart) => {
+                                    const order = ['สมบูรณ์', 'แขวงส่งกลับแล้ว', 'รอแขวง', 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', 'คงเหลือ'];
+                                    const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                    return order.map(lbl => original.find(o => o.text === lbl)).filter(Boolean);
+                                }
+                            }
+                        },
+                        datalabels: { display: false },
+                        tooltip: {
+                            titleFont: { family: 'Sarabun', weight: '800' }, bodyFont: { family: 'Sarabun' },
+                            callbacks: { afterBody: makeRemainingTooltipAfterBody('env') }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { color: chartTickColor(), font: { size: isSmallScreen ? 9 : 11, weight: '800' } } },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            max: isPercent ? 100 : undefined,
+                            grid: { color: chartGridColor() },
+                            ticks: {
+                                color: chartTickColor(),
+                                font: { size: isSmallScreen ? 9 : 11 },
+                                callback: v => isPercent ? v + '%' : v
+                            }
+                        }
+                    }
+                },
+                // ปลั๊กอินแบบเฉพาะกราฟนี้: วาดป้ายลอยทรงแคปซูล "ยอดรวมคำขอ" ไว้เหนือแท่งของแต่ละ สทล. — แสดงเฉพาะโหมด "จำนวนงาน" เท่านั้น
+                // (โหมด % ความสำเร็จ แกน Y เป็นเปอร์เซ็นต์ ตัวเลขจำนวนจริงจะไปทับกับป้าย % บนแท่ง จึงซ่อนไว้)
+/*                plugins: [{
+                    id: 'envBarTotalLabels',
+                    afterDatasetsDraw(chart) {
+                        if (isPercent) return;
+                        const topIndex = chart.data.datasets.length - 1; // dataset บนสุดของแท่ง (สมบูรณ์)
+                        const meta = chart.getDatasetMeta(topIndex);
+                        if (!meta || meta.hidden) return;
+                        const ctx = chart.ctx;
+                        meta.data.forEach((bar, i) => {
+                            const total = rawTotalsS[i];
+                            if (!total) return;
+                            drawFloatingBadge(ctx, bar.x, bar.y, total.toLocaleString());
+                        });
+                    }
+                }]*/
+plugins: [{
+    id: 'envBarTotalLabels',
+    afterDatasetsDraw(chart) {
+        if (isPercent) return;
+        const yScale = chart.scales.y;
+        const xScale = chart.scales.x;
+
+        chart.data.labels.forEach((_, i) => {
+            // รวมเฉพาะ dataset ที่ยังไม่ถูกปิดใน legend
+            let total = 0;
+            chart.data.datasets.forEach((ds, dsIdx) => {
+                if (chart.isDatasetVisible(dsIdx)) total += ds.data[i] || 0;
+            });
+            if (!total) return;
+
+            const x = xScale.getPixelForValue(i);
+            const y = yScale.getPixelForValue(total); // ยอดบนสุดของส่วนที่ยังแสดงอยู่
+            drawFloatingBadge(chart.ctx, x, y, total.toLocaleString());
+        });
+    }
+}]
+            });
+        }
+
+        function setEnvChartMode(mode) {
+            if (envChartMode === mode) return;
+            envChartMode = mode;
+            const countBtn   = document.getElementById('envModeCountBtn');
+            const percentBtn = document.getElementById('envModePercentBtn');
+            const activeCls  = "px-2.5 py-1 rounded-md text-xs font-black transition-colors bg-white text-indigo-600 shadow-sm";
+            const idleCls    = "px-2.5 py-1 rounded-md text-xs font-black transition-colors text-slate-500";
+            if (countBtn)   countBtn.className   = (mode === 'count')   ? activeCls : idleCls;
+            if (percentBtn) percentBtn.className = (mode === 'percent') ? activeCls : idleCls;
+            renderEnvBarChart(); // ใช้ข้อมูลที่โหลดไว้แล้ว ไม่ยิง API ซ้ำ
+        }
+
+        // ===== MODAL: รายงานสิ่งแวดล้อมของ สทล. ที่คลิก แยกเป็นรายแขวง (แต่ละแขวงมี 2 กราฟแท่ง EAR/EC) =====
+        function showEnvDistrictModal(stlLabel) {
+            const modal          = document.getElementById('detailsModal');
+            const modalTitle     = document.getElementById('modalTitle');
+            const modalContainer = document.getElementById('modalContainer');
+
+            const num = getStlNum(stlLabel);
+const visibleStatuses = getEnvVisibleStatuses();
+const districtRows = buildAllEnvRows().filter(r =>
+    getStlNum(r.stl) === num && visibleStatuses.includes(r.envStatus5)
+);
+
+            modalTitle.innerHTML = `<span class="h-3 w-1 bg-indigo-500 rounded-full"></span> รายงานสิ่งแวดล้อม <span class="text-indigo-600 ml-1">${stlLabel}</span>`;
+
+            if (districtRows.length === 0) {
+                modalContainer.innerHTML = `<div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 font-medium shadow-sm">ไม่มีข้อมูลรายงานสิ่งแวดล้อมของ ${stlLabel}</div>`;
+                modal.classList.remove('hidden');
+                return;
+            }
+
+            // จัดกลุ่มตามแขวง เรียงตามชื่อ
+            const khwaengMap = {};
+            districtRows.forEach(r => {
+                if (!khwaengMap[r.khwaeng]) khwaengMap[r.khwaeng] = [];
+                khwaengMap[r.khwaeng].push(r);
+            });
+            const khwaengNames = Object.keys(khwaengMap).sort((a, b) => a.localeCompare(b, 'th'));
+
+            // เรียง/คำนวณ 5 สถานะโดยใช้ r.envStatus5 (แยก "รอจัดทำเล่มสมบูรณ์" ออกจาก "คงเหลือ" เดิม) ให้ตรงกับการ์ด 2 และกราฟหลัก
+            const countOf = rows => ({
+                complete:    rows.filter(r => r.envStatus5 === 'complete').length,
+                returned:    rows.filter(r => r.envStatus5 === 'returned').length,
+                waiting:     rows.filter(r => r.envStatus5 === 'waiting').length,
+                remaining:   rows.filter(r => r.envStatus5 === 'remaining').length,
+                pendingBook: rows.filter(r => r.envStatus5 === 'pendingBook').length
+            });
+
+            let bodyHtml = '<div class="space-y-4">';
+            const chartJobs = [];
+
+            khwaengNames.forEach((khwaengName, idx) => {
+                const rows    = khwaengMap[khwaengName];
+                const earRows = rows.filter(r => r.type === 'EAR');
+                const ecRows  = rows.filter(r => r.type === 'EC');
+                const earC = countOf(earRows);
+                const ecC  = countOf(ecRows);
+                const earCanvasId = `envKhwaengEar_${idx}`;
+                const ecCanvasId  = `envKhwaengEc_${idx}`;
+const legendItem = (status, label, count) => visibleStatuses.includes(status)
+    ? `<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm inline-block" style="background:${CHART_COLORS[status]}"></span> ${label} ${count}</span>`
+    : '';
+
+                bodyHtml += `<div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <div class="flex justify-between items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                        <span class="text-sm font-black text-slate-800 truncate">แขวง: ${khwaengName}</span>
+                        <span class="text-xs font-black text-slate-500 shrink-0">รวม ${(earRows.length + ecRows.length).toLocaleString()} คำขอ</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between items-center gap-2 mb-1">
+                                <div class="text-xs font-black text-slate-600">EAR <span class="font-bold text-slate-400">(คลิกกราฟเพื่อดูรายคำขอ)</span></div>
+                                <span class="text-xs font-black text-slate-800 shrink-0">${earRows.length.toLocaleString()} คำขอ</span>
+                            </div>
+                            <div style="height: 48px;"><canvas id="${earCanvasId}"></canvas></div>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-[11px] font-bold text-slate-600">
+${legendItem('remaining',   'คงเหลือ',            earC.remaining)}
+${legendItem('pendingBook', 'รอทำเล่มสมบูรณ์',    earC.pendingBook)}
+${legendItem('waiting',     'รอแขวง',            earC.waiting)}
+${legendItem('returned',    'แขวงส่งกลับแล้ว',    earC.returned)}
+${legendItem('complete',    'สมบูรณ์',            earC.complete)}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center gap-2 mb-1">
+                                <div class="text-xs font-black text-slate-600">EC <span class="font-bold text-slate-400">(คลิกกราฟเพื่อดูรายคำขอ)</span></div>
+                                <span class="text-xs font-black text-slate-800 shrink-0">${ecRows.length.toLocaleString()} คำขอ</span>
+                            </div>
+                            <div style="height: 48px;"><canvas id="${ecCanvasId}"></canvas></div>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-[11px] font-bold text-slate-600">
+${legendItem('remaining',   'คงเหลือ',            ecC.remaining)}
+${legendItem('pendingBook', 'รอทำเล่มสมบูรณ์',    ecC.pendingBook)}
+${legendItem('waiting',     'รอแขวง',            ecC.waiting)}
+${legendItem('returned',    'แขวงส่งกลับแล้ว',    ecC.returned)}
+${legendItem('complete',    'สมบูรณ์',            ecC.complete)}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+                chartJobs.push({ earCanvasId, earC, ecCanvasId, ecC, khwaengName });
+            });
+            bodyHtml += '</div>';
+
+            modalContainer.innerHTML = bodyHtml;
+            modal.classList.remove('hidden');
+
+            chartJobs.forEach(job => {
+                renderEnvModalHorizontalBar(job.earCanvasId, job.earC, (status) => showEnvRequestListModal(stlLabel, job.khwaengName, 'EAR', status));
+                renderEnvModalHorizontalBar(job.ecCanvasId, job.ecC, (status) => showEnvRequestListModal(stlLabel, job.khwaengName, 'EC', status));
+            });
+        }
+
+        // ===== MODAL: รายคำขอจริงของแขวง+ประเภทรายงาน (+สถานะที่คลิก) เหมือนเวอร์ชันเดิม =====
+        // status: 'complete' | 'returned' | 'waiting' | 'remaining' | 'pendingBook' | null (null = ไม่กรองสถานะ แสดงทั้งหมด)
+        const ENV_STATUS_LABEL = { complete: 'สมบูรณ์', returned: 'แขวงส่งกลับแล้ว', waiting: 'รอแขวง', remaining: 'คงเหลือ', pendingBook: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)' };
+        const ENV_STATUS_TEXT_CLASS = { complete: 'text-[#40C79A]', returned: 'text-[#98CF59]', waiting: 'text-[#FDE68A]', remaining: 'text-[#E74A6D]', pendingBook: 'text-[#FFB066]' };
+        // แถบสี accent ของโมดัล ใช้สีเดียวกับ CHART_COLORS เป๊ะๆ (single source of truth เดียวกับกราฟ) แทน Tailwind class ตายตัว
+        const ENV_STATUS_ACCENT_COLOR = { complete: CHART_COLORS.complete, returned: CHART_COLORS.returned, waiting: CHART_COLORS.waiting, remaining: CHART_COLORS.remaining, pendingBook: CHART_COLORS.pendingBook };
+        const ENV_STATUS_BADGE_CLASS = {
+            complete: 'bg-[#40C79A]/10 text-[#2F9D7A] border-[#40C79A]/30',
+            returned: 'bg-[#98CF59]/10 text-[#6E9E3C] border-[#98CF59]/30',
+            waiting: 'bg-[#FDE68A]/10 text-[#A6790A] border-[#FDE68A]/30',
+            remaining: 'bg-[#E74A6D]/10 text-[#C13152] border-[#E74A6D]/30',
+            pendingBook: 'bg-[#FFB066]/10 text-[#C2670A] border-[#FFB066]/30'
+        };
+
+        // ตรวจว่าคำขอ (row จาก buildAllEnvRows) เข้าเงื่อนไขสถานะที่ระบุหรือไม่
+        // ใช้ r.envStatus5 (คำนวณครั้งเดียวใน buildAllEnvRows) เป็นแหล่งความจริงจุดเดียวทั้งระบบ (แยก pendingBook ออกจาก remaining)
+        function envRowMatchesStatus(r, status) {
+            if (!status) return true;
+            return r.envStatus5 === status;
+        }
+
+        function showEnvRequestListModal(stlLabel, khwaengName, type, status) {
+            const modal          = document.getElementById('detailsModal');
+            const modalTitle     = document.getElementById('modalTitle');
+            const modalContainer = document.getElementById('modalContainer');
+
+            const num  = getStlNum(stlLabel);
+const visibleStatuses = getEnvVisibleStatuses();
+const scopeRows = buildAllEnvRows().filter(r =>
+    getStlNum(r.stl) === num && r.khwaeng === khwaengName && r.type === type
+    && visibleStatuses.includes(r.envStatus5)
+);
+            let rows = scopeRows;
+            if (status) rows = rows.filter(r => envRowMatchesStatus(r, status));
+
+            const statusText = status ? ` <span class="${ENV_STATUS_TEXT_CLASS[status]} font-black">${ENV_STATUS_LABEL[status]}</span>` : '';
+            const accentColor = status ? ENV_STATUS_ACCENT_COLOR[status] : CHART_COLORS.complete;
+            // สีของแถบหัวข้อ, ข้อความ สทล./แขวง และแท็กประเภทรายงาน เปลี่ยนตามสถานะที่คลิกเข้ามา ให้โทนสีตรงกับส่วนของกราฟที่กด
+            const scopeTextClass = status ? ENV_STATUS_TEXT_CLASS[status] : 'text-indigo-600';
+            modalTitle.innerHTML = `<span class="h-3 w-1 rounded-full" style="background:${accentColor}"></span> รายงานสิ่งแวดล้อม ${type}${statusText} <span class="${scopeTextClass} ml-1">${stlLabel} • แขวง${khwaengName}</span>`;
+
+            const badgeClass = status ? ENV_STATUS_BADGE_CLASS[status] : 'bg-indigo-50 text-indigo-700 border-indigo-200';
+            let bodyHtml = `<button type="button" onclick="showEnvDistrictModal('${stlLabel}')" class="text-xs font-black text-slate-900 hover:text-black flex items-center gap-1 mb-1">← กลับไปที่ ${stlLabel}</button>`;
+            // แสดงรายการคำขอตรงๆ (ไม่ต้องกดขยาย สทล./แขวง อีก เพราะรู้ขอบเขตแน่นอนแล้วจากชื่อในหัวข้อโมดัล)
+            bodyHtml += renderRequestItemsDirect(rows, scopeTextClass);
+            if (rows.length === 0) {
+                bodyHtml += `<div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 font-medium shadow-sm">ไม่มีรายการคำขอในส่วนนี้</div>`;
+            }
+            bodyHtml += `<div class="bg-slate-800 text-white rounded-xl p-4 flex justify-between items-center shadow-md mt-2"><span class="text-base font-black">รวมคำขอ</span><div class="text-right"><span class="text-xl md:text-2xl font-black">${rows.length.toLocaleString()}</span><span class="text-xs font-bold text-slate-300 ml-1">/ ${scopeRows.length.toLocaleString()} คำขอ</span></div></div>`;
+
+            modalContainer.innerHTML = bodyHtml;
+            modal.classList.remove('hidden');
+        }
+
+        function renderEnvModalHorizontalBar(canvasId, c, onSegmentClick) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            // ลำดับเดียวกับกราฟแท่งด้านนอก: คงเหลือ -> รอจัดทำเล่มสมบูรณ์ -> รอแขวง -> แขวงส่งกลับแล้ว -> สมบูรณ์
+            const statusByDatasetIndex = ['remaining', 'pendingBook', 'waiting', 'returned', 'complete'];
+            const total = c.complete + c.returned + c.waiting + c.remaining + c.pendingBook;
+            // มนเฉพาะขอบนอกสุดของแท่งทั้งเส้น (ซ้ายสุด/ขวาสุดที่มีค่า > 0) ส่วนตรงกลางเป็นเหลี่ยม
+            // ไม่งั้นทุกส่วนจะมนทั้ง 2 ข้างพร้อมกัน ทำให้แท่งที่มีหลายสีดูเป็นเหลี่ยม/มนปนกันไม่สม่ำเสมอ
+            const segValues = [c.remaining, c.pendingBook, c.waiting, c.returned, c.complete];
+            const nonZeroIdx = segValues.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
+            const firstIdx = nonZeroIdx.length ? nonZeroIdx[0] : -1;
+            const lastIdx = nonZeroIdx.length ? nonZeroIdx[nonZeroIdx.length - 1] : -1;
+            const radiusFor = (idx) => {
+                const isFirst = idx === firstIdx;
+                const isLast = idx === lastIdx;
+                if (!isFirst && !isLast) return 0;
+                return {
+                    topLeft: isFirst ? 4 : 0, bottomLeft: isFirst ? 4 : 0,
+                    topRight: isLast ? 4 : 0, bottomRight: isLast ? 4 : 0
+                };
+            };
+            if (onSegmentClick) canvas.style.cursor = 'pointer';
+            new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: [''],
+                    datasets: [
+                        { label: 'คงเหลือ', data: [c.remaining], backgroundColor: CHART_COLORS.remaining, borderRadius: radiusFor(0), borderSkipped: false },
+                        { label: 'รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)', data: [c.pendingBook], backgroundColor: CHART_COLORS.pendingBook, borderRadius: radiusFor(1), borderSkipped: false },
+                        { label: 'รอแขวง', data: [c.waiting], backgroundColor: CHART_COLORS.waiting, borderRadius: radiusFor(2), borderSkipped: false },
+                        { label: 'แขวงส่งกลับแล้ว', data: [c.returned], backgroundColor: CHART_COLORS.returned, borderRadius: radiusFor(3), borderSkipped: false },
+                        { label: 'สมบูรณ์', data: [c.complete], backgroundColor: CHART_COLORS.complete, borderRadius: radiusFor(4), borderSkipped: false }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 600, easing: 'easeOutQuart' },
+                    onClick: onSegmentClick ? (event, elements) => {
+                        // คลิกตรงส่วนสีไหน (คงเหลือ/รอแขวง/แขวงส่งกลับแล้ว/สมบูรณ์) กรองแสดงเฉพาะสถานะนั้น
+                        // ถ้าคลิกพื้นที่ว่าง (ไม่โดนแท่งสี เช่น ค่าเป็น 0) ให้แสดงรวมทุกสถานะแทน
+                        const status = elements.length > 0 ? statusByDatasetIndex[elements[0].datasetIndex] : null;
+                        onSegmentClick(status);
+                    } : undefined,
+                    plugins: { legend: { display: false }, datalabels: { display: false } },
+                    scales: {
+                        // กำหนด max ตรงกับผลรวมจริงของแท่งนี้เท่านั้น (ไม่ให้ Chart.js ปัดขึ้นเป็นเลขกลมๆ)
+                        // เพื่อให้แท่งเต็มความกว้างเสมอ ไม่ว่าค่ารวมจะเป็นเท่าไหร่
+                        x: { stacked: true, min: 0, max: total > 0 ? total : 1, grid: { display: false }, ticks: { display: false } },
+                        y: { stacked: true, grid: { display: false }, ticks: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // ===== MODAL: shapefile (จากแท่งชาร์ต) และ map (จากโดนัท) =====
+        // คำนวณสดจากข้อมูลรายคำขอ (currentSheetData) แล้วแสดงเป็นต้นไม้ สทล. -> แขวง -> คำขอ (กด + เพื่อขยายแต่ละชั้น)
+        // shapefile: สถานะจากคอลัมน์ X (index 23)
+        // map:       สถานะจากคอลัมน์ AM (index 38), นับเฉพาะคำขอที่ต้องใช้แผนที่ (AH/index 33)
+        function showDetailModal(chartType, scopeName, clickIndex) {
+            const modal          = document.getElementById('detailsModal');
+            const modalTitle     = document.getElementById('modalTitle');
+            const modalContainer = document.getElementById('modalContainer');
+
+            const isCompleted = (clickIndex === 0);
+            const statusLabel = isCompleted ? "เสร็จสะสม" : "คงเหลือ";
+            let rows = [], colorClass = "", badgeClass = "";
+
+            let totalsRows = null;
+            if (chartType === 'shapefile') {
+                colorClass = isCompleted ? "text-emerald-600" : "text-rose-500";
+                badgeClass = isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200";
+                const stlNumber = scopeName.replace("สทล.", "").trim();
+                const allShpRows = buildAllShapefileRows().filter(r => r.stl.includes(stlNumber));
+                rows = allShpRows.filter(r => r.status === (isCompleted ? 'complete' : 'remaining'));
+                totalsRows = allShpRows; // ผลรวมทั้งหมด (เสร็จ+คงเหลือ) ของ สทล./แขวง นี้ ใช้เทียบสัดส่วน
+                modalTitle.innerHTML = `<span class="h-3 w-1 bg-emerald-500 rounded-full"></span> งาน Shapefile ${statusLabel} ของ <span class="${colorClass} ml-1 font-black">${scopeName}</span>`;
+            } else if (chartType === 'map') {
+                colorClass = isCompleted ? "text-amber-500" : "text-rose-500";
+                badgeClass = isCompleted ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200";
+                const allMapRows = buildAllMapRows();
+                rows = allMapRows.filter(r => r.status === (isCompleted ? 'complete' : 'remaining'));
+                totalsRows = allMapRows; // ผลรวมทั้งหมด (เสร็จ+คงเหลือ) ของ สทล./แขวง นี้ ใช้เทียบสัดส่วน
+                modalTitle.innerHTML = `<span class="h-3 w-1 bg-amber-400 rounded-full"></span> แผนที่ประกอบคำขอ ${statusLabel} <span class="text-xs text-slate-400 font-normal ml-1">(รวมทุก สทล.)</span>`;
+            }
+
+            let bodyHtml = (chartType === 'shapefile')
+                ? renderKhwaengGroupsFlat(rows, badgeClass, totalsRows)
+                : renderNestedRequestGroups(rows, badgeClass, totalsRows);
+            if (!bodyHtml) {
+                bodyHtml = `<div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 font-medium shadow-sm">ไม่มีรายการค้างคาหรือข้อมูลในส่วนนี้</div>`;
+            }
+            bodyHtml += `<div class="bg-slate-800 text-white rounded-xl p-4 flex justify-between items-center shadow-md"><span class="text-base font-black">รวมทุกแขวง</span><div class="text-right"><span class="text-xl md:text-2xl font-black">${rows.length.toLocaleString()}</span><span class="text-xs font-bold text-slate-300 ml-1">คำขอ</span></div></div>`;
+
+            modalContainer.innerHTML = bodyHtml;
+            modal.classList.remove('hidden');
+        }
+
+        // ===== MODAL: รายละเอียดคำขอรายวัน (คลิกที่กรอบ "ความคืบหน้า" ฝั่งซ้าย) =====
+        // หมายเหตุ: ใช้ข้อมูลดิบรายคำขอจากชีทแรกของ sheetData เดียวกัน (แถวที่ไม่ใช่แถวสรุป/Pivot — คือแถวที่ col AA (index 26) ว่าง)
+        // คอลัมน์: I = สทล. (index 8), G = คำขอ (index 6)
+        // Shapefile = X (index 23), แผนที่/แผนผัง = AM (index 38)
+        // สิ่งแวดล้อม: ร่างส่งเขต = AD (index 29), รับจากแขวง = AE (index 30), สมบูรณ์ = AF (index 31)
+        // แต่ละคอลัมน์ข้างต้นเก็บ "วันที่" ของคำขอนั้นๆ จึงต้อง filter ให้ตรงกับวันที่ที่แสดงในกรอบความคืบหน้า (currentReportDate) เท่านั้น
+        const THAI_MONTHS = {"ม.ค.":1,"ก.พ.":2,"มี.ค.":3,"เม.ย.":4,"พ.ค.":5,"มิ.ย.":6,"ก.ค.":7,"ส.ค.":8,"ก.ย.":9,"ต.ค.":10,"พ.ย.":11,"ธ.ค.":12};
+
+        function parseThaiAbbrevDate(str) {
+            // รูปแบบ "24 เม.ย. 2026" หรือ "4 เม.ย. 2026"
+            const m = str.match(/^(\d{1,2})\s+([ก-ฮ\.]+)\s+(\d{4})$/);
+            if (!m) return null;
+            const dd = parseInt(m[1], 10);
+            const mm = THAI_MONTHS[m[2]];
+            let yyyy = parseInt(m[3], 10);
+            if (!mm) return null;
+            if (yyyy > 2400) yyyy -= 543; // เผื่อเป็น พ.ศ.
+            return new Date(yyyy, mm - 1, dd);
+        }
+
+        function parseDateOnly(val) {
+            if (val === undefined || val === null || val.toString().trim() === "") return null;
+            const str = val.toString().trim();
+
+            // เผื่อเป็นรูปแบบไทย เช่น "24 เม.ย. 2026"
+            const thaiD = parseThaiAbbrevDate(str);
+            if (thaiD) return thaiD;
+
+            // ลองแปลงตรงๆ ก่อน (เผื่อเป็น ISO string ที่ Apps Script ส่งมาจาก Date object)
+            let d = new Date(str);
+            if (!isNaN(d.getTime()) && d.getFullYear() > 1975) {
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            }
+
+            // เผื่อเป็นรูปแบบ d/m/yyyy หรือ dd-mm-yyyy (รองรับทั้ง ค.ศ. และ พ.ศ.)
+            const parts = str.split(/[\/\-]/);
+            if (parts.length === 3) {
+                let dd = parseInt(parts[0], 10);
+                let mm = parseInt(parts[1], 10);
+                let yyyy = parseInt(parts[2], 10);
+                if (yyyy > 2400) yyyy -= 543; // พ.ศ. -> ค.ศ.
+                if (!isNaN(dd) && !isNaN(mm) && !isNaN(yyyy)) {
+                    return new Date(yyyy, mm - 1, dd);
+                }
+            }
+            return null;
+        }
+
+        function isSameDay(valA, valB) {
+            const dA = parseDateOnly(valA);
+            const dB = parseDateOnly(valB);
+            if (!dA || !dB) return false;
+            return dA.getFullYear() === dB.getFullYear() && dA.getMonth() === dB.getMonth() && dA.getDate() === dB.getDate();
+        }
+
+        // แยกแค่ "วัน/เดือน" ออกมา รองรับทั้งรูปแบบสั้นไม่มีปี (เช่น "25/6") และวันที่เต็มรูปแบบ
+        function extractDayMonth(val) {
+            if (val === undefined || val === null) return null;
+            const str = val.toString().trim();
+            if (str === "") return null;
+
+            const parts = str.split(/[\/\-]/);
+            if (parts.length === 2) {
+                // รูปแบบสั้น d/m หรือ dd/mm ไม่มีปี เช่น "25/6"
+                const dd = parseInt(parts[0], 10);
+                const mm = parseInt(parts[1], 10);
+                if (!isNaN(dd) && !isNaN(mm)) return { day: dd, month: mm };
+                return null;
+            }
+
+            // ถ้าไม่ใช่รูปแบบสั้น ให้ลองแปลงเป็นวันที่เต็มรูปแบบแล้วดึงวัน/เดือนออกมา
+            const d = parseDateOnly(val);
+            if (d) return { day: d.getDate(), month: d.getMonth() + 1 };
+            return null;
+        }
+
+        // เทียบแค่ "วัน/เดือน" (ไม่สนปี) — ใช้กับ column X ที่กรอกแบบสั้น เช่น "25/6"
+        function isSameDayMonth(valA, valB) {
+            const a = extractDayMonth(valA);
+            const b = extractDayMonth(valB);
+            if (!a || !b) return false;
+            return a.day === b.day && a.month === b.month;
+        }
+
+        function buildDailyRequestRows(colIndex, typeColIndex) {
+            const rows = [];
+            currentSheetData.forEach((row, idx) => {
+                if (idx === 0) return; // ข้ามแถวหัวตาราง (row 1 ของชีท)
+
+                const reqNo   = row[6] ? row[6].toString().trim() : "";
+                const stlName = row[8] ? row[8].toString().trim() : "";
+                const khwaeng = row[9] ? row[9].toString().trim() : "ไม่ระบุแขวง";
+                if (!reqNo || !stlName) return; // ข้ามแถวที่ไม่มีคำขอ/สทล. (แถวว่างหรือแถวหัวตาราง)
+
+                const cellVal = row[colIndex];
+
+                // เทียบวัน/เดือนของคอลัมน์นี้ (X / AM / AD / AE / AF) กับวันที่ที่แสดงในกรอบความคืบหน้า (currentReportDate)
+                if (!isSameDayMonth(cellVal, currentReportDate)) return;
+
+                // คอลัมน์ Y (index 24) = ประเภทรายงาน EAR/EC (ใช้กับรายงานสิ่งแวดล้อมเท่านั้น)
+                const reqType = (typeColIndex !== undefined && row[typeColIndex]) ? row[typeColIndex].toString().trim() : "";
+
+                rows.push({ stl: stlName, khwaeng: khwaeng, req: reqNo, type: reqType });
+            });
+            return rows;
+        }
+
+        // สร้างรายการคำขอ "สิ่งแวดล้อม" ทั้งหมด (ไม่กรองวันที่) พร้อมสถานะ ใช้กับโดนัทสิ่งแวดล้อม
+        // สถานะ: complete = ส่งรายงานสมบูรณ์แล้ว (AF/31 มีค่า)
+        //        waiting  = ส่งร่างให้แขวงแล้ว (AD/29) แต่แขวงยังไม่ส่งกลับ (AE/30 ว่าง) และยังไม่สมบูรณ์
+        //        remaining = นอกเหนือจากนั้น (ยังไม่ได้ส่งร่าง หรือได้รับร่างคืนจากแขวงแล้วแต่ยังไม่ส่งฉบับสมบูรณ์)
+        function buildAllEnvRows() {
+            const rows = [];
+            currentSheetData.forEach((row, idx) => {
+                if (idx === 0) return; // ข้ามแถวหัวตาราง
+
+                const reqNo   = row[6] ? row[6].toString().trim() : "";
+                const stlName = row[8] ? row[8].toString().trim() : "";
+                const khwaeng = row[9] ? row[9].toString().trim() : "ไม่ระบุแขวง";
+                if (!reqNo || !stlName) return;
+
+                const reqType = row[24] ? row[24].toString().trim() : ""; // Y = ประเภทรายงาน EAR/EC
+                if (!reqType) return; // ไม่ใช่คำขอที่ต้องทำรายงานสิ่งแวดล้อม
+
+                const apVal = row[41] ? row[41].toString().trim() : ""; // AP = Phase
+                if (apVal === "01.เร่งด่วน") return; // ไม่นับคำขอ "01.เร่งด่วน" ในรายงานสิ่งแวดล้อม (การ์ด 2 และกราฟความคืบหน้า)
+
+                const draftSent = row[29] ? row[29].toString().trim() : ""; // AD ส่งร่างให้แขวงแล้ว
+                const recvBack  = row[30] ? row[30].toString().trim() : ""; // AE แขวงส่งร่างกลับมาแล้ว
+                const complete  = row[31] ? row[31].toString().trim() : ""; // AF ส่งรายงานสมบูรณ์แล้ว
+
+                let status;
+                if (complete) status = 'complete';
+                else if (draftSent && !recvBack) status = 'waiting';
+                else status = 'remaining';
+
+                const hasDraft = !!draftSent, hasRecv = !!recvBack, hasComplete = !!complete;
+
+                // envStatus4: สถานะ 4 ค่า (complete/returned/waiting/remaining) — single source of truth
+                // logic ต้องตรงกับ envRowMatchesStatus() เป๊ะๆ (ยึด envRowMatchesStatus() เป็นสูตรอ้างอิง)
+                let envStatus4;
+                if (hasComplete) envStatus4 = 'complete';
+                else if (hasRecv) envStatus4 = 'returned';
+                else if (status === 'waiting') envStatus4 = 'waiting';
+                else envStatus4 = 'remaining';
+
+                // คอลัมน์ AA (index 26) = ประเภทเล่มรายงาน: "หลัก" / "ซ้ำ" / "สับเซต"
+                // แถวที่เป็น "ซ้ำ" หรือ "สับเซต" ใช้เล่มรายงานร่วมกับคำขอ "หลัก" (ไม่ต้องจัดทำเล่มใหม่)
+                const bookType = row[26] ? row[26].toString().trim() : "";
+                const isSharedBook = (bookType === 'ซ้ำ' || bookType === 'สับเซต');
+
+                // envStatus5: สถานะ 5 ค่า — แยก "รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)" ออกจาก "คงเหลือ" เดิม
+                // เงื่อนไข: เดิมต้องเป็น remaining อยู่แล้ว และคอลัมน์ AA ขึ้น "ซ้ำ"/"สับเซต" (ถ้าขึ้น "หลัก" ยังนับเป็น remaining เหมือนเดิม)
+                const envStatus5 = (envStatus4 === 'remaining' && isSharedBook) ? 'pendingBook' : envStatus4;
+
+                rows.push({
+                    stl: stlName, khwaeng: khwaeng, req: reqNo, type: reqType, status: status,
+                    // ฟิลด์ดิบเพิ่มเติม (ไม่กระทบ status เดิม) ใช้แยกกลุ่ม "แขวงส่งกลับแล้ว" ในกราฟหลัก
+                    hasDraft: hasDraft, hasRecv: hasRecv, hasComplete: hasComplete,
+                    // envStatus4: field ใหม่ (เสริม ไม่แทนที่ status เดิม) ใช้เป็นแหล่งคำนวณสถานะ env จุดเดียวทั้งระบบ
+                    envStatus4: envStatus4,
+                    // bookType / envStatus5: เสริมสำหรับแยก "รอจัดทำเล่มสมบูรณ์ (ขาดข้อมูลจากแขวง)" ในการ์ด 2 และกราฟความคืบหน้า
+                    bookType: bookType,
+                    envStatus5: envStatus5
+                });
+            });
+            return rows;
+        }
+
+        let dailyGroupToggleCounter = 0; // ใช้สร้าง id ไม่ซ้ำกันสำหรับปุ่ม +/- ของแต่ละกลุ่ม
+
+        function renderDailyRequestGroup(rows, badgeClass) {
+            if (rows.length === 0) return "";
+            const grouped = {};
+            rows.forEach(r => {
+                const key = r.stl + "‖" + r.khwaeng;
+                if (!grouped[key]) grouped[key] = { stl: r.stl, khwaeng: r.khwaeng, reqList: [] };
+                grouped[key].reqList.push(r);
+            });
+            let html = "";
+            for (const group of Object.values(grouped)) {
+                dailyGroupToggleCounter++;
+                const groupId = "daily-group-" + dailyGroupToggleCounter;
+                const itemsHtml = group.reqList.map(item => {
+                    const typeTag = item.type ? ` <span class="text-indigo-500 font-bold">รายงาน ${item.type}</span>` : "";
+                    return `<div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 pl-3 text-slate-700 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span><span>${item.req}${typeTag}</span></div>`;
+                }).join("");
+                html += `<div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-4 py-2.5 flex justify-between items-center border-b border-slate-200 bg-slate-100">
+                        <div class="min-w-0">
+                            <span class="text-sm font-black text-slate-800 block truncate">${group.stl}</span>
+                            <span class="text-xs font-bold text-slate-500 block truncate">แขวง: ${group.khwaeng}</span>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-black px-2 py-0.5 rounded-md border ${badgeClass}">${group.reqList.length.toLocaleString()} คำขอ</span>
+                            <button type="button" onclick="toggleDailyGroup('${groupId}')" class="h-6 w-6 flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 font-black hover:bg-slate-50 transition-colors shrink-0" aria-label="แสดง/ซ่อนรายการคำขอ">
+                                <span id="${groupId}-icon">+</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="${groupId}" class="hidden p-2 divide-y divide-slate-50 text-sm">${itemsHtml}</div>
+                </div>`;
+            }
+            return html;
+        }
+
+        // ===== เวอร์ชันซ้อนชั้น: สทล. (กด + เพื่อดูแขวง) -> แขวง (กด + เพื่อดูคำขอ) -> รายการคำขอ =====
+        // totalsRows (ไม่บังคับ): ถ้าระบุ จะใช้ชุดข้อมูลนี้คำนวณ "ผลรวม" ต่อ สทล./แขวง แทนการนับแค่ rows ที่แสดง
+        // (ใช้กับกราฟโดนัทสิ่งแวดล้อม ที่อยากเห็นผลรวมทั้งหมดของ สทล./แขวง นั้นๆ รวมทุกสถานะ ไม่ใช่แค่สถานะที่กำลังดู)
+        // ===== แสดงระดับ "แขวง" ตรงๆ โดยไม่ห่อด้วย สทล. อีกชั้น — ใช้ตอนที่ข้อมูลถูกกรองมาอยู่ในสทล.เดียวแล้ว (เช่น กดจากกราฟแท่ง Shapefile ของสทล.นั้น) =====
+        function renderKhwaengGroupsFlat(rows, badgeClass, totalsRows, typeTagClass) {
+            typeTagClass = typeTagClass || 'text-indigo-500';
+            if (rows.length === 0) return "";
+
+            const khwaengMap = {};
+            rows.forEach(r => {
+                if (!khwaengMap[r.khwaeng]) khwaengMap[r.khwaeng] = [];
+                khwaengMap[r.khwaeng].push(r);
+            });
+            const khwaengNames = Object.keys(khwaengMap).sort((a, b) => a.localeCompare(b, 'th'));
+
+            let khwaengGrandMap = null;
+            if (totalsRows) {
+                khwaengGrandMap = {};
+                totalsRows.forEach(r => { khwaengGrandMap[r.khwaeng] = (khwaengGrandMap[r.khwaeng] || 0) + 1; });
+            }
+
+            let html = '<div class="space-y-2">';
+            khwaengNames.forEach(khwaengName => {
+                const reqList = khwaengMap[khwaengName];
+                dailyGroupToggleCounter++;
+                const khwaengGroupId = "nested-khwaeng-" + dailyGroupToggleCounter;
+                const itemsHtml = reqList.map(item => {
+                    const typeTag = item.type ? ` <span class="${typeTagClass} font-bold">รายงาน ${item.type}</span>` : "";
+                    return `<div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 pl-3 text-slate-700 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span><span>${item.req}${typeTag}</span></div>`;
+                }).join("");
+                const khwaengBadgeText = khwaengGrandMap
+                    ? `${reqList.length.toLocaleString()}/${(khwaengGrandMap[khwaengName] || reqList.length).toLocaleString()} คำขอ`
+                    : `${reqList.length.toLocaleString()} คำขอ`;
+                html += `<div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                    <div class="px-4 py-2.5 flex justify-between items-center border-b border-slate-200 bg-slate-100">
+                        <span class="text-sm font-black text-slate-800 truncate">แขวง: ${khwaengName}</span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-black px-2 py-0.5 rounded-md border ${badgeClass}">${khwaengBadgeText}</span>
+                            <button type="button" onclick="toggleDailyGroup('${khwaengGroupId}')" class="h-6 w-6 flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 font-black hover:bg-slate-50 transition-colors shrink-0" aria-label="แสดง/ซ่อนรายการคำขอ">
+                                <span id="${khwaengGroupId}-icon">+</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="${khwaengGroupId}" class="hidden p-2 divide-y divide-slate-50 text-sm">${itemsHtml}</div>
+                </div>`;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        // ===== แสดงรายการคำขอตรงๆ ไม่ต้องกดขยายอีกชั้น — ใช้ตอนที่รู้ทั้งสทล.และแขวงแน่นอนแล้ว (ชื่อแขวงอยู่ในหัวข้อโมดัลอยู่แล้ว) =====
+        function renderRequestItemsDirect(rows, typeTagClass) {
+            typeTagClass = typeTagClass || 'text-indigo-500';
+            if (rows.length === 0) return "";
+            const itemsHtml = rows.map(item => {
+                const typeTag = item.type ? ` <span class="${typeTagClass} font-bold">รายงาน ${item.type}</span>` : "";
+                return `<div class="flex items-center gap-2 py-2 border-b border-slate-100 last:border-0 text-slate-700 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span><span>${item.req}${typeTag}</span></div>`;
+            }).join("");
+            return `<div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm divide-y divide-slate-50">${itemsHtml}</div>`;
+        }
+
+        function renderNestedRequestGroups(rows, badgeClass, totalsRows, typeTagClass) {
+            typeTagClass = typeTagClass || 'text-indigo-500';
+            if (rows.length === 0) return "";
+
+            // จัดกลุ่ม: สทล. -> แขวง -> [คำขอ] (ใช้ rows ที่แสดงจริงเสมอ)
+            const stlMap = {};
+            rows.forEach(r => {
+                if (!stlMap[r.stl]) stlMap[r.stl] = {};
+                if (!stlMap[r.stl][r.khwaeng]) stlMap[r.stl][r.khwaeng] = [];
+                stlMap[r.stl][r.khwaeng].push(r);
+            });
+
+            // เรียงลำดับ สทล. ตามหมายเลข (สทล.01, สทล.02, ... ) แทนลำดับที่เจอในข้อมูลดิบ
+            const stlOrder = Object.keys(stlMap).sort((a, b) => {
+                const numA = parseInt(a.replace(/[^0-9]/g, ""), 10);
+                const numB = parseInt(b.replace(/[^0-9]/g, ""), 10);
+                if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+                return a.localeCompare(b, "th");
+            });
+
+            // ถ้ามี totalsRows ให้สร้างตารางผลรวมจริงต่อ สทล. และต่อ (สทล.+แขวง) จากชุดข้อมูลนั้น
+            let stlGrandMap = null, khwaengGrandMap = null;
+            if (totalsRows) {
+                stlGrandMap = {}; khwaengGrandMap = {};
+                totalsRows.forEach(r => {
+                    stlGrandMap[r.stl] = (stlGrandMap[r.stl] || 0) + 1;
+                    const key = r.stl + '‖' + r.khwaeng;
+                    khwaengGrandMap[key] = (khwaengGrandMap[key] || 0) + 1;
+                });
+            }
+
+            let html = "";
+            stlOrder.forEach(stlName => {
+                const khwaengMap = stlMap[stlName];
+                const khwaengNames = Object.keys(khwaengMap);
+                const stlTotal = khwaengNames.reduce((sum, k) => sum + khwaengMap[k].length, 0);
+                const stlGrandTotal = stlGrandMap ? (stlGrandMap[stlName] || stlTotal) : stlTotal;
+                const stlBadgeText = stlGrandMap
+                    ? `${stlTotal.toLocaleString()}/${stlGrandTotal.toLocaleString()} คำขอ`
+                    : `${stlTotal.toLocaleString()} คำขอ`;
+
+                dailyGroupToggleCounter++;
+                const stlGroupId = "nested-stl-" + dailyGroupToggleCounter;
+
+                let khwaengHtml = "";
+                khwaengNames.forEach(khwaengName => {
+                    const reqList = khwaengMap[khwaengName];
+                    dailyGroupToggleCounter++;
+                    const khwaengGroupId = "nested-khwaeng-" + dailyGroupToggleCounter;
+                    const itemsHtml = reqList.map(item => {
+                        const typeTag = item.type ? ` <span class="${typeTagClass} font-bold">รายงาน ${item.type}</span>` : "";
+                        return `<div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 pl-3 text-slate-700 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span><span>${item.req}${typeTag}</span></div>`;
+                    }).join("");
+                    // ระดับแขวง: ถ้ามี totalsRows ให้แสดง "จำนวนในตัวกรองนี้ / ผลรวมทั้งหมดของแขวงนั้น" (รวมทุกสถานะ)
+                    // ถ้าไม่มี totalsRows (โหมดเดิม) ให้แสดง "จำนวนในตัวกรองนี้ / ผลรวมของ สทล." เหมือนเดิม
+                    const khwaengBadgeText = khwaengGrandMap
+                        ? `${reqList.length.toLocaleString()}/${(khwaengGrandMap[stlName + '‖' + khwaengName] || reqList.length).toLocaleString()} คำขอ`
+                        : `${reqList.length.toLocaleString()} / ${stlTotal.toLocaleString()} คำขอ`;
+                    khwaengHtml += `<div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                        <div class="px-3 py-2 flex justify-between items-center border-b border-slate-100 bg-slate-50/80">
+                            <span class="text-xs font-black text-slate-700 truncate">แขวง: ${khwaengName}</span>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <span class="text-[11px] font-black px-1.5 py-0.5 rounded border ${badgeClass}">${khwaengBadgeText}</span>
+                                <button type="button" onclick="toggleDailyGroup('${khwaengGroupId}')" class="h-5 w-5 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-600 font-black hover:bg-slate-50 transition-colors shrink-0" aria-label="แสดง/ซ่อนรายการคำขอ">
+                                    <span id="${khwaengGroupId}-icon">+</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="${khwaengGroupId}" class="hidden p-2 divide-y divide-slate-50 text-sm">${itemsHtml}</div>
+                    </div>`;
+                });
+
+                html += `<div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-4 py-2.5 flex justify-between items-center border-b border-slate-200 bg-slate-100">
+                        <span class="text-sm font-black text-slate-800 truncate">${stlName}</span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-black px-2 py-0.5 rounded-md border ${badgeClass}">${stlBadgeText}</span>
+                            <button type="button" onclick="toggleDailyGroup('${stlGroupId}')" class="h-6 w-6 flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 font-black hover:bg-slate-50 transition-colors shrink-0" aria-label="แสดง/ซ่อนรายชื่อแขวง">
+                                <span id="${stlGroupId}-icon">+</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="${stlGroupId}" class="hidden p-2 space-y-2">${khwaengHtml}</div>
+                </div>`;
+            });
+            return html;
+        }
+
+        // สร้างรายการ "งาน Shapefile" ทั้งหมด (ไม่กรองวันที่) พร้อมสถานะ เสร็จ/คงเหลือ จากคอลัมน์ X (index 23)
+        // เงื่อนไขการนับคำขอ อ้างอิงสูตรเดียวกับในชีท: 'รวมคำขอ'!AP:AP,"<>01.เร่งด่วน", 'รวมคำขอ'!BG:BG,"="
+        // คือ นับเฉพาะแถวที่ AP (index 41) ไม่ใช่ "01.เร่งด่วน" และ BG (index 58) ว่าง
+        function buildAllShapefileRows() {
+            const rows = [];
+            currentSheetData.forEach((row, idx) => {
+                if (idx === 0) return;
+                const reqNo   = row[6] ? row[6].toString().trim() : "";
+                const stlName = row[8] ? row[8].toString().trim() : "";
+                const khwaeng = row[9] ? row[9].toString().trim() : "ไม่ระบุแขวง";
+                if (!reqNo || !stlName) return;
+
+                const apVal = row[41] ? row[41].toString().trim() : ""; // AP
+                const bgVal = row[58] ? row[58].toString().trim() : ""; // BG
+                if (apVal === "01.เร่งด่วน") return; // AP ต้องไม่ใช่ "01.เร่งด่วน"
+                if (bgVal !== "") return;            // BG ต้องว่าง
+
+                const doneVal = row[23] ? row[23].toString().trim() : "";
+                rows.push({ stl: stlName, khwaeng: khwaeng, req: reqNo, type: "", status: doneVal ? 'complete' : 'remaining' });
+            });
+            return rows;
+        }
+
+        // สร้างรายการ "งานแผนที่/แผนผัง" ทั้งหมด (ไม่กรองวันที่) พร้อมสถานะ เสร็จ/คงเหลือ จากคอลัมน์ AM (index 38)
+        // นับเฉพาะคำขอที่ต้องใช้แผนที่ (คอลัมน์ AH/index 33 มีค่าและไม่ใช่ "-")
+        function buildAllMapRows() {
+            const rows = [];
+            currentSheetData.forEach((row, idx) => {
+                if (idx === 0) return;
+                const reqNo   = row[6] ? row[6].toString().trim() : "";
+                const stlName = row[8] ? row[8].toString().trim() : "";
+                const khwaeng = row[9] ? row[9].toString().trim() : "ไม่ระบุแขวง";
+                if (!reqNo || !stlName) return;
+
+                const needsMap = row[33] ? row[33].toString().trim() : "";
+                if (!needsMap || needsMap === "-" || needsMap.toUpperCase() === "X") return; // คำขอนี้ไม่ต้องใช้แผนที่ (ว่าง, "-", หรือ "X")
+
+                const doneVal = row[38] ? row[38].toString().trim() : "";
+                rows.push({ stl: stlName, khwaeng: khwaeng, req: reqNo, type: "", status: doneVal ? 'complete' : 'remaining' });
+            });
+            return rows;
+        }
+
+        function toggleDailyGroup(groupId) {
+            const el   = document.getElementById(groupId);
+            const icon = document.getElementById(groupId + "-icon");
+            if (!el) return;
+            const isHidden = el.classList.contains('hidden');
+            el.classList.toggle('hidden');
+            if (icon) icon.textContent = isHidden ? "−" : "+";
+        }
+
+        function showDailyRequestModal(category) {
+            const modal          = document.getElementById('detailsModal');
+            const modalTitle     = document.getElementById('modalTitle');
+            const modalContainer = document.getElementById('modalContainer');
+
+            let bodyHtml = "";
+            let totalCount = 0;
+
+            if (category === 'shapefile') {
+                modalTitle.innerHTML = `<span class="h-3 w-1 bg-emerald-500 rounded-full"></span> รายละเอียดคำขอ Shapefile ของวันนี้`;
+                const rows = buildDailyRequestRows(23);
+                totalCount = rows.length;
+                bodyHtml = renderNestedRequestGroups(rows, "bg-emerald-50 text-emerald-700 border-emerald-200");
+            } else if (category === 'map') {
+                modalTitle.innerHTML = `<span class="h-3 w-1 bg-amber-400 rounded-full"></span> รายละเอียดคำขอแผนที่/แผนผัง ของวันนี้`;
+                const rows = buildDailyRequestRows(38);
+                totalCount = rows.length;
+                bodyHtml = renderNestedRequestGroups(rows, "bg-amber-50 text-amber-700 border-amber-200");
+            } else if (category === 'env') {
+                modalTitle.innerHTML = `<span class="h-3 w-1 bg-indigo-500 rounded-full"></span> รายละเอียดคำขอรายงานสิ่งแวดล้อม ของวันนี้`;
+                const draftRows = buildDailyRequestRows(29, 24);
+                const recvRows  = buildDailyRequestRows(30, 24);
+                const compRows  = buildDailyRequestRows(31, 24);
+                totalCount = draftRows.length + recvRows.length + compRows.length;
+
+                const draftHtml = renderNestedRequestGroups(draftRows, "bg-indigo-50 text-indigo-700 border-indigo-200");
+                const recvHtml  = renderNestedRequestGroups(recvRows,  "bg-indigo-50 text-indigo-700 border-indigo-200");
+                const compHtml  = renderNestedRequestGroups(compRows,  "bg-indigo-50 text-indigo-700 border-indigo-200");
+
+                if (draftHtml) bodyHtml += `<div class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5">• ร่างส่งเขต</div><div class="space-y-2">${draftHtml}</div>`;
+                if (recvHtml)  bodyHtml += `<div class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 ${draftHtml ? 'mt-4' : ''}">• รับจากแขวง</div><div class="space-y-2">${recvHtml}</div>`;
+                if (compHtml)  bodyHtml += `<div class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 ${(draftHtml || recvHtml) ? 'mt-4' : ''}">• สมบูรณ์</div><div class="space-y-2">${compHtml}</div>`;
+            }
+
+            if (!bodyHtml) {
+                bodyHtml = `<div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 font-medium shadow-sm">ไม่มีรายการคำขอใหม่ในวันนี้</div>`;
+            }
+
+            bodyHtml += `<div class="bg-slate-800 text-white rounded-xl p-4 flex justify-between items-center shadow-md mt-2"><span class="text-base font-black">รวมคำขอวันนี้</span><div class="text-right"><span class="text-xl md:text-2xl font-black">${totalCount.toLocaleString()}</span><span class="text-xs font-bold text-slate-300 ml-1">คำขอ</span></div></div>`;
+
+            modalContainer.innerHTML = bodyHtml;
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('detailsModal').classList.add('hidden'); }
+        window.onclick = function(event) { const m = document.getElementById('detailsModal'); if (event.target === m) closeModal(); };
+
+        initDashboard();
+        setInterval(initDashboard, 3600000);
+    </script>
+</body>
+</html>
