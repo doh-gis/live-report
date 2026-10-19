@@ -195,6 +195,11 @@
             body { padding: .7rem !important; }
         }
 
+        .env-status-dot { width: 16px; height: 16px; border-radius: 9999px; background: var(--c);
+            border: 2px solid var(--c); cursor: pointer; transition: transform .15s, opacity .15s, background .15s; }
+        .env-status-dot:hover { transform: scale(1.2); }
+        .env-status-dot.is-off { background: transparent; opacity: .5; }  /* สถานะที่ถูกปิด = วงกลมโปร่ง */
+
     </style>
 </head>
 <body class="text-slate-800 min-h-screen w-full p-3 md:p-4 lg:p-5 flex flex-col lg:h-screen lg:overflow-hidden box-border text-sm font-semibold">
@@ -441,6 +446,13 @@
                         <span class="h-3 w-3 bg-indigo-500 rounded-full"></span> ความคืบหน้ารายงานสิ่งแวดล้อม <span class="text-[10px] md:text-xs font-bold text-slate-400">(คลิกที่ชาร์ตเพื่อดูรายแขวง)</span>
                     </h3>
                     <div class="flex items-center gap-1.5 shrink-0">
+<div id="envStatusDots" class="flex items-center gap-1.5 mr-1">
+    <button type="button" data-status="complete"    onclick="soloEnvStatus('complete')"    title="แสดงเฉพาะ: สมบูรณ์"                 class="env-status-dot" style="--c:#40C79A"></button>
+    <button type="button" data-status="returned"    onclick="soloEnvStatus('returned')"    title="แสดงเฉพาะ: แขวงส่งกลับแล้ว"          class="env-status-dot" style="--c:#98CF59"></button>
+    <button type="button" data-status="waiting"     onclick="soloEnvStatus('waiting')"     title="แสดงเฉพาะ: รอแขวง"                  class="env-status-dot" style="--c:#FDE68A"></button>
+    <button type="button" data-status="pendingBook" onclick="soloEnvStatus('pendingBook')" title="แสดงเฉพาะ: รอจัดทำเล่มสมบูรณ์"        class="env-status-dot" style="--c:#FFB066"></button>
+    <button type="button" data-status="remaining"   onclick="soloEnvStatus('remaining')"   title="แสดงเฉพาะ: คงเหลือ"                  class="env-status-dot" style="--c:#E74A6D"></button>
+</div>
                         <button id="envSortBtn" type="button" onclick="toggleEnvSort()" title="เรียง สทล. ตามคงเหลือมากไปน้อย"
                             class="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-black border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors">
                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9M3 12h9m-9 4h5m6-9v14m0 0l-3-3m3 3l3-3"/></svg>
@@ -1296,6 +1308,23 @@
 // ลำดับต้องตรงกับ datasets ใน renderEnvBarChart
 const ENV_STATUS_BY_DATASET = ['remaining', 'pendingBook', 'waiting', 'returned', 'complete'];
 
+function syncEnvStatusDots() {
+    const vis = getEnvVisibleStatuses();
+    document.querySelectorAll('#envStatusDots [data-status]').forEach(b =>
+        b.classList.toggle('is-off', !vis.includes(b.dataset.status)));
+}
+
+// กดสีเดียว = แสดงเฉพาะสีนั้น / กดซ้ำตอนที่แสดงเฉพาะสีนั้นอยู่ = กลับมาแสดงทั้งหมด
+function soloEnvStatus(status) {
+    const chart = envBarChartInstance;
+    if (!chart) return;
+    const vis = getEnvVisibleStatuses();
+    const isSolo = vis.length === 1 && vis[0] === status;
+    ENV_STATUS_BY_DATASET.forEach((s, i) => chart.setDatasetVisibility(i, isSolo || s === status));
+    chart.update();
+    syncEnvStatusDots();
+}
+
 function getEnvVisibleStatuses() {
     if (!envBarChartInstance) return [...ENV_STATUS_BY_DATASET];
     return ENV_STATUS_BY_DATASET.filter((_, i) => envBarChartInstance.isDatasetVisible(i));
@@ -1321,6 +1350,10 @@ function getEnvVisibleStatuses() {
             const remS    = idxs.map(i => rem[i]);
             const pendS   = idxs.map(i => pend[i]);
             const rawTotalsS = idxs.map(i => rawTotals[i]);
+
+const prevVisible = envBarChartInstance
+    ? ENV_STATUS_BY_DATASET.map((_, i) => envBarChartInstance.isDatasetVisible(i))
+    : null;
 
             if (envBarChartInstance) envBarChartInstance.destroy();
             // มนเฉพาะขอบนอกสุดของแท่ง (บนสุด/ล่างสุดที่มีค่า > 0 ในแต่ละ สทล.) ส่วนตรงกลางเป็นเหลี่ยม
@@ -1367,6 +1400,10 @@ function getEnvVisibleStatuses() {
                     plugins: {
                         legend: {
                             position: 'top',
+                            onClick: (e, item, legend) => {
+                                Chart.defaults.plugins.legend.onClick.call(legend, e, item, legend);
+                                syncEnvStatusDots();
+                            },
                             labels: {
                                 color: chartTextColor(), font: { size: isSmallScreen ? 10 : 12, weight: '800' }, boxWidth: 10,
                                 // เรียง legend ให้ตรงกับลำดับการ์ดด้านบน (สมบูรณ์ -> ส่งกลับแล้ว -> รอแขวง -> รอทำเล่ม -> คงเหลือ)
@@ -1399,45 +1436,35 @@ function getEnvVisibleStatuses() {
                         }
                     }
                 },
-                // ปลั๊กอินแบบเฉพาะกราฟนี้: วาดป้ายลอยทรงแคปซูล "ยอดรวมคำขอ" ไว้เหนือแท่งของแต่ละ สทล. — แสดงเฉพาะโหมด "จำนวนงาน" เท่านั้น
-                // (โหมด % ความสำเร็จ แกน Y เป็นเปอร์เซ็นต์ ตัวเลขจำนวนจริงจะไปทับกับป้าย % บนแท่ง จึงซ่อนไว้)
-/*                plugins: [{
+
+                plugins: [{
                     id: 'envBarTotalLabels',
                     afterDatasetsDraw(chart) {
                         if (isPercent) return;
-                        const topIndex = chart.data.datasets.length - 1; // dataset บนสุดของแท่ง (สมบูรณ์)
-                        const meta = chart.getDatasetMeta(topIndex);
-                        if (!meta || meta.hidden) return;
-                        const ctx = chart.ctx;
-                        meta.data.forEach((bar, i) => {
-                            const total = rawTotalsS[i];
+                        const yScale = chart.scales.y;
+                        const xScale = chart.scales.x;
+
+                        chart.data.labels.forEach((_, i) => {
+                            // รวมเฉพาะ dataset ที่ยังไม่ถูกปิดใน legend
+                            let total = 0;
+                            chart.data.datasets.forEach((ds, dsIdx) => {
+                                if (chart.isDatasetVisible(dsIdx)) total += ds.data[i] || 0;
+                            });
                             if (!total) return;
-                            drawFloatingBadge(ctx, bar.x, bar.y, total.toLocaleString());
+
+                            const x = xScale.getPixelForValue(i);
+                            const y = yScale.getPixelForValue(total); // ยอดบนสุดของส่วนที่ยังแสดงอยู่
+                            drawFloatingBadge(chart.ctx, x, y, total.toLocaleString());
                         });
                     }
-                }]*/
-plugins: [{
-    id: 'envBarTotalLabels',
-    afterDatasetsDraw(chart) {
-        if (isPercent) return;
-        const yScale = chart.scales.y;
-        const xScale = chart.scales.x;
-
-        chart.data.labels.forEach((_, i) => {
-            // รวมเฉพาะ dataset ที่ยังไม่ถูกปิดใน legend
-            let total = 0;
-            chart.data.datasets.forEach((ds, dsIdx) => {
-                if (chart.isDatasetVisible(dsIdx)) total += ds.data[i] || 0;
+                }]
             });
-            if (!total) return;
 
-            const x = xScale.getPixelForValue(i);
-            const y = yScale.getPixelForValue(total); // ยอดบนสุดของส่วนที่ยังแสดงอยู่
-            drawFloatingBadge(chart.ctx, x, y, total.toLocaleString());
-        });
-    }
-}]
-            });
+            if (prevVisible) {
+                prevVisible.forEach((v, i) => envBarChartInstance.setDatasetVisibility(i, v));
+                envBarChartInstance.update('none');
+            }
+            syncEnvStatusDots();
         }
 
         function setEnvChartMode(mode) {
